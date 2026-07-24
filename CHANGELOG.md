@@ -24,6 +24,8 @@ GitHub release notes are assembled from this file.
 - Command: **Insert today's Vikunja tasks** — writes a read-only, self-replacing
   callout of tasks due today or overdue (optionally including undated), each with
   due date, priority, and a web-UI link.
+- Command: **Open Vikunja task in browser** — opens the current line's task from
+  its marker (no API call; works offline).
 - Project scaffold: TypeScript + esbuild build, Obsidian sample-plugin layout,
   GPL-3.0-or-later license.
 - Pure line/marker logic (`src/markers.ts`) and today-callout rendering

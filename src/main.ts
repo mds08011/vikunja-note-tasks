@@ -4,6 +4,7 @@ import { VikunjaSettingTab } from "./settings";
 import {
 	createFromSelectionOrLine,
 	insertTodayTasks,
+	openTaskInBrowser,
 	pushAllOpenTasks,
 	refreshStatuses,
 	setTaskDoneOnLine,
@@ -86,6 +87,12 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 			id: "insert-today-tasks",
 			name: "Insert today's Vikunja tasks",
 			editorCallback: (editor: Editor) => insertTodayTasks(this, editor),
+		});
+
+		this.addCommand({
+			id: "open-task-in-browser",
+			name: "Open Vikunja task in browser",
+			editorCallback: (editor: Editor) => openTaskInBrowser(this, editor),
 		});
 	}
 

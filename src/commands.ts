@@ -357,3 +357,24 @@ export async function insertTodayTasks(
 		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
 	}
 }
+
+/**
+ * "Open Vikunja task in browser": opens the current line's task in the browser.
+ * Purely local — no API call — so it works offline against the web UI.
+ */
+export function openTaskInBrowser(
+	plugin: VikunjaNoteTasksPlugin,
+	editor: Editor,
+): void {
+	const id = getMarkerId(editor.getLine(editor.getCursor("from").line));
+	if (id === null) {
+		new Notice("Vikunja: no task marker on this line.");
+		return;
+	}
+	const base = plugin.settings.baseUrl.trim();
+	if (!base) {
+		new Notice("Vikunja: set the base URL in the plugin settings first.");
+		return;
+	}
+	window.open(taskWebUrl(base, id), "_blank");
+}
