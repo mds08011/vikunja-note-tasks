@@ -1,6 +1,7 @@
-import { Plugin } from "obsidian";
+import { Editor, Plugin } from "obsidian";
 import { VikunjaClient } from "./api";
 import { VikunjaSettingTab } from "./settings";
+import { createFromSelectionOrLine } from "./commands";
 
 /** A cached (id, title) pair for the project dropdown. */
 export interface CachedProject {
@@ -41,7 +42,13 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 		this.addSettingTab(new VikunjaSettingTab(this.app, this));
-		// Commands are registered in later builds.
+
+		this.addCommand({
+			id: "create-task-from-selection-or-line",
+			name: "Create task from selection or line",
+			editorCallback: (editor: Editor) =>
+				createFromSelectionOrLine(this, editor),
+		});
 	}
 
 	/** Builds a client from the current settings. Cheap; call per action. */

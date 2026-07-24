@@ -10,6 +10,10 @@ GitHub release notes are assembled from this file.
 
 ### Added
 
+- Command: **Create task from selection or line** — creates a task in the default
+  project (applying default labels, creating any that are missing) and rewrites
+  the line in place with a `[vk](url)` link and `<!--vk:id-->` marker. Refuses to
+  act on an already-marked line.
 - Project scaffold: TypeScript + esbuild build, Obsidian sample-plugin layout,
   GPL-3.0-or-later license.
 - Pure line/marker logic (`src/markers.ts`) and today-callout rendering
