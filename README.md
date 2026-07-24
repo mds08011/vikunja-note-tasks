@@ -107,9 +107,14 @@ install it from **Settings → Community plugins → Browse**.
 - [USER_GUIDE.md](USER_GUIDE.md) — non-developer walkthroughs, the frontmatter
   contract, mobile toolbar setup, and troubleshooting.
 - [ROADMAP.md](ROADMAP.md) — the plan and the permanent non-goals.
-- [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) — architecture and how to
-  contribute.
+- [docs/DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) — architecture, the marker
+  spec, and how to add a command.
+- [docs/api-notes.md](docs/api-notes.md) — every Vikunja endpoint used.
+- [docs/adr/](docs/adr/) — architecture decision records (why explicit-only, the
+  marker format, v1/v2 strategy, `requestUrl`, licensing).
+- [docs/templates/](docs/templates/) — example notes demonstrating the contract.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contribution and DCO policy.
+- [RELEASING.md](RELEASING.md) — release procedure and the tag rule.
 
 ## License
 

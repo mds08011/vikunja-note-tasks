@@ -60,10 +60,96 @@ plain-language message (see [Troubleshooting](#troubleshooting)).
 
 ## Commands
 
-Command walkthroughs with before/after Markdown examples are added as each
-command ships. See the command table in the [README](README.md#commands) for the
-current list. All commands live in the command palette and have **no default
+All commands live in the command palette (`Ctrl/Cmd-P`) and have **no default
 hotkey** — assign your own in **Settings → Hotkeys** if you like.
+
+### Create task from selection or line
+
+Put your cursor on a task line (or select the text you want as the title) and run
+the command. The plugin creates the task in your default project, applies your
+default labels, and rewrites the line.
+
+**Before:**
+
+```md
+- [ ] Order rebar for the footings
+```
+
+**After:**
+
+```md
+- [ ] Order rebar for the footings [vk](https://vikunja.example.com/tasks/123) <!--vk:123-->
+```
+
+Notes:
+
+- If a line already has a `<!--vk:…-->` marker, the command refuses to act — no
+  duplicates.
+- A trailing `→ [[Note]]` pointer is kept at the end of the line, and is **not**
+  part of the task title:
+
+  ```md
+  - [ ] Pour footing → [[Footing pour details]]
+  ```
+
+  becomes
+
+  ```md
+  - [ ] Pour footing [vk](https://vikunja.example.com/tasks/9) <!--vk:9--> → [[Footing pour details]]
+  ```
+
+### Push all open tasks in note to Vikunja
+
+Scans the whole note and creates a task for every unchecked `- [ ]` line that
+doesn't already have a marker, rewriting each. Lines that already have a marker
+are skipped. You get a summary like **"Created 4, skipped 1."**
+
+### Mark Vikunja task done
+
+Cursor on a marked line. Sets the task done in Vikunja **and** flips the local
+checkbox:
+
+```md
+- [ ] Submit permit application [vk](…/tasks/50) <!--vk:50-->
+```
+
+→
+
+```md
+- [x] Submit permit application [vk](…/tasks/50) <!--vk:50-->
+```
+
+### Toggle Vikunja task done/undone
+
+Same as above but flips in whichever direction the checkbox currently is. Done and
+undone only — kanban bucket moves are out of scope.
+
+### Refresh Vikunja task statuses in note
+
+For every marker in the note, fetches the current done-state from Vikunja and
+updates the **local checkbox** to match. Vikunja is the source of truth for this
+command only. If a task was deleted in Vikunja (404), the plugin reports its ID
+and **leaves your line completely untouched** — it never edits or removes text.
+
+### Insert today's Vikunja tasks
+
+Inserts a read-only callout of tasks due today or overdue at your cursor:
+
+```md
+> [!todo] Vikunja — due today & overdue
+> *Read-only snapshot generated 2026-07-24. Re-run "Insert today's Vikunja tasks" to refresh.*
+>
+> - **Order rebar for the footings** · due 2026-07-24 · High priority · [open](https://vikunja.example.com/tasks/123)
+```
+
+The block is fenced by hidden comment markers, so re-running the command
+**replaces** it in place instead of adding a second copy. Turn on **Include
+undated tasks** in settings to also list tasks with no due date.
+
+### Open Vikunja task in browser
+
+Cursor on a marked line; opens that task's page in your browser. No network call —
+it just builds the URL from the marker, so it works offline.
 
 ## Frontmatter contract
 

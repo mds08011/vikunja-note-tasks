@@ -43,6 +43,11 @@ GitHub release notes are assembled from this file.
   (issue-first policy and DCO sign-off).
 - Example note templates in `docs/templates/` for two fictional projects
   demonstrating the frontmatter contract and the task-per-line pattern.
+- Architecture decision records in `docs/adr/` (explicit-actions-only, marker
+  format, v2-aware API strategy, `requestUrl` over `fetch`, GPL-3.0 licensing).
+- `docs/SUBMISSION.md` — community-plugins.json entry, id-availability check,
+  submission checklist, DCO app step, and the PR procedure.
+- Per-command walkthroughs with before/after examples in `USER_GUIDE.md`.
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
 [Unreleased]: https://github.com/USERNAME/vikunja-note-tasks/commits/main
