@@ -3,9 +3,12 @@ import type VikunjaNoteTasksPlugin from "./main";
 import { VikunjaClient, VikunjaApiError, describeVikunjaError } from "./api";
 import {
 	extractTitle,
+	getCheckboxState,
+	getMarkerId,
 	hasMarker,
 	isUncheckedTaskLine,
 	rewriteLineWithTask,
+	setCheckboxState,
 } from "./markers";
 import { taskWebUrl } from "./render";
 import { parseCsvList, dedupeCaseInsensitive, summarize } from "./util";
@@ -175,5 +178,44 @@ export async function pushAllOpenTasks(
 		new Notice(
 			`Vikunja: ${describeVikunjaError(err)} Created ${created} before stopping.`,
 		);
+	}
+}
+
+/**
+ * Shared implementation for the two done-state commands. `mode: "done"` always
+ * sets done; `mode: "toggle"` flips based on the current local checkbox state.
+ * Sets the state in Vikunja first, then mirrors it onto the local checkbox.
+ */
+export async function setTaskDoneOnLine(
+	plugin: VikunjaNoteTasksPlugin,
+	editor: Editor,
+	mode: "done" | "toggle",
+): Promise<void> {
+	try {
+		const client = plugin.getClient();
+		client.ensureConfigured();
+
+		const lineIndex = editor.getCursor("from").line;
+		const lineText = editor.getLine(lineIndex);
+		const id = getMarkerId(lineText);
+		if (id === null) {
+			new Notice("Vikunja: no task marker on this line.");
+			return;
+		}
+
+		const current = getCheckboxState(lineText) ?? false;
+		const newDone = mode === "done" ? true : !current;
+
+		await client.setTaskDone(id, newDone);
+
+		const updated = setCheckboxState(lineText, newDone);
+		if (updated !== lineText) {
+			replaceLine(editor, lineIndex, updated);
+		}
+		new Notice(
+			`Vikunja: task #${id} marked ${newDone ? "done" : "not done"}.`,
+		);
+	} catch (err) {
+		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
 	}
 }

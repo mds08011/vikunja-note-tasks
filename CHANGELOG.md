@@ -16,6 +16,8 @@ GitHub release notes are assembled from this file.
   act on an already-marked line.
 - Command: **Push all open tasks in note to Vikunja** — batch-creates a task for
   every unmarked `- [ ]` line, rewrites each, and reports "Created N, skipped M".
+- Commands: **Mark Vikunja task done** and **Toggle Vikunja task done/undone** —
+  set/flip the done state in Vikunja and mirror it onto the local checkbox.
 - Project scaffold: TypeScript + esbuild build, Obsidian sample-plugin layout,
   GPL-3.0-or-later license.
 - Pure line/marker logic (`src/markers.ts`) and today-callout rendering

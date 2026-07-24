@@ -1,7 +1,11 @@
 import { Editor, Plugin } from "obsidian";
 import { VikunjaClient } from "./api";
 import { VikunjaSettingTab } from "./settings";
-import { createFromSelectionOrLine, pushAllOpenTasks } from "./commands";
+import {
+	createFromSelectionOrLine,
+	pushAllOpenTasks,
+	setTaskDoneOnLine,
+} from "./commands";
 
 /** A cached (id, title) pair for the project dropdown. */
 export interface CachedProject {
@@ -54,6 +58,20 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 			id: "push-all-open-tasks",
 			name: "Push all open tasks in note to Vikunja",
 			editorCallback: (editor: Editor) => pushAllOpenTasks(this, editor),
+		});
+
+		this.addCommand({
+			id: "mark-task-done",
+			name: "Mark Vikunja task done",
+			editorCallback: (editor: Editor) =>
+				setTaskDoneOnLine(this, editor, "done"),
+		});
+
+		this.addCommand({
+			id: "toggle-task-done",
+			name: "Toggle Vikunja task done/undone",
+			editorCallback: (editor: Editor) =>
+				setTaskDoneOnLine(this, editor, "toggle"),
 		});
 	}
 
