@@ -8,6 +8,8 @@ GitHub release notes are assembled from this file.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-24
+
 ### Added
 
 - Command: **Create task from selection or line** — creates a task in the default
@@ -48,10 +50,11 @@ GitHub release notes are assembled from this file.
 - Architecture decision records in `docs/adr/` (explicit-actions-only, marker
   format, v2-aware API strategy, `requestUrl` over `fetch`, GPL-3.0 licensing).
 - `docs/SUBMISSION.md` — community-plugins.json entry, id-availability check,
-  submission checklist, DCO app step, and the PR procedure.
+  submission checklist, DCO enforcement, and the PR procedure.
 - Per-command walkthroughs with before/after examples in `USER_GUIDE.md`.
 - README illustrations (`docs/media/*.svg`) of the capture transform and the
   today callout.
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
-[Unreleased]: https://github.com/mds08011/vikunja-note-tasks/commits/main
+[Unreleased]: https://github.com/mds08011/vikunja-note-tasks/compare/0.1.0...HEAD
+[0.1.0]: https://github.com/mds08011/vikunja-note-tasks/releases/tag/0.1.0
