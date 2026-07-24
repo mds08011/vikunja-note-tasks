@@ -14,6 +14,8 @@ GitHub release notes are assembled from this file.
   GPL-3.0-or-later license.
 - Pure line/marker logic (`src/markers.ts`) and today-callout rendering
   (`src/render.ts`), fully unit-tested.
+- Thin typed Vikunja REST client (`src/api.ts`) with a plain-language error
+  taxonomy, documented in `docs/api-notes.md`.
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
 [Unreleased]: https://github.com/USERNAME/vikunja-note-tasks/commits/main
