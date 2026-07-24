@@ -16,6 +16,11 @@ GitHub release notes are assembled from this file.
   (`src/render.ts`), fully unit-tested.
 - Thin typed Vikunja REST client (`src/api.ts`) with a plain-language error
   taxonomy, documented in `docs/api-notes.md`.
+- Settings tab: base URL, API token (stored unencrypted, with an in-UI warning),
+  default project dropdown, default labels, include-undated and
+  open-after-create toggles, and a **Test connection** button that loads projects.
+- `USER_GUIDE.md` with setup steps, the frontmatter contract, mobile toolbar
+  setup, and a troubleshooting table.
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
 [Unreleased]: https://github.com/USERNAME/vikunja-note-tasks/commits/main

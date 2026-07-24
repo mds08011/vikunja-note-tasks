@@ -89,6 +89,17 @@ export interface VikunjaClientConfig {
 	token: string;
 }
 
+/**
+ * Turns any thrown value into a single plain-language sentence suitable for a
+ * Notice. `VikunjaApiError` messages are already user-facing and distinct per
+ * failure class, so they pass straight through.
+ */
+export function describeVikunjaError(err: unknown): string {
+	if (err instanceof VikunjaApiError) return err.message;
+	if (err instanceof Error) return err.message;
+	return String(err);
+}
+
 /** Attempts to pull a human message out of a Vikunja error body. */
 function serverMessageOf(body: unknown): string | undefined {
 	if (body && typeof body === "object") {
