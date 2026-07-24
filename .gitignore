@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output (main.js is built in CI and attached to releases, never committed)
+main.js
+main.js.map
+
+# Editor / OS cruft
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# Local Obsidian test vault, if any
+/test-vault/

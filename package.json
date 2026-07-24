@@ -1,0 +1,30 @@
+{
+	"name": "vikunja-note-tasks",
+	"version": "0.1.0",
+	"description": "Unofficial Obsidian plugin for explicit, user-triggered task capture and viewing against a self-hosted Vikunja server.",
+	"main": "main.js",
+	"type": "module",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc --noEmit --skipLibCheck && node esbuild.config.mjs production",
+		"typecheck": "tsc --noEmit --skipLibCheck",
+		"test": "node --import tsx --test tests/*.test.ts",
+		"version": "node version-bump.mjs && git add manifest.json versions.json"
+	},
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"vikunja",
+		"tasks"
+	],
+	"author": "Malcolm Smith",
+	"license": "GPL-3.0-or-later",
+	"devDependencies": {
+		"@types/node": "^22.10.0",
+		"builtin-modules": "^4.0.0",
+		"esbuild": "^0.24.2",
+		"obsidian": "^1.7.2",
+		"tsx": "^4.19.2",
+		"typescript": "^5.7.2"
+	}
+}

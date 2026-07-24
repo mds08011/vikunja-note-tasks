@@ -1,0 +1,27 @@
+/*
+ * Vikunja Note Tasks styles.
+ * Kept intentionally minimal: the plugin renders standard Markdown callouts
+ * and uses Obsidian's native settings and modal components, so there is very
+ * little bespoke UI to style. Class names are namespaced with `vnt-`.
+ */
+
+.vnt-setting-token-note {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	border-left: 3px solid var(--background-modifier-border);
+	padding-left: 0.75em;
+	margin: 0.5em 0 1em 0;
+}
+
+.vnt-test-connection-result {
+	margin-top: 0.5em;
+	font-size: var(--font-ui-smaller);
+}
+
+.vnt-test-connection-result.vnt-is-error {
+	color: var(--text-error);
+}
+
+.vnt-test-connection-result.vnt-is-success {
+	color: var(--text-success);
+}
