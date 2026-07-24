@@ -4,7 +4,7 @@ import builtins from "builtin-modules";
 
 const banner = `/*
 This is a bundled, generated file. Do not edit directly.
-Source: https://github.com/vikunja-note-tasks (see src/ for the readable source).
+Source: https://github.com/mds08011/vikunja-note-tasks (see src/ for the readable source).
 Licensed GPL-3.0-or-later.
 */`;
 

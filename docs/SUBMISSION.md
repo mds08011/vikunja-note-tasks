@@ -4,9 +4,9 @@ Everything needed to submit Vikunja Note Tasks to the Obsidian community plugin
 directory. **Do not open the PR from automation** — this is a human step, done
 when you're ready.
 
-> **Fill in the placeholder first.** Replace `USERNAME` everywhere with the actual
-> GitHub owner of the repository (this file, `README.md`, and `CHANGELOG.md` use
-> it), and confirm the **author** name below is how you want to be credited.
+> **Repo:** <https://github.com/mds08011/vikunja-note-tasks> (owner `mds08011`).
+> Confirm the **author** name (`Malcolm Smith`, from git config) is how you want to
+> be credited in `manifest.json` and the entry below before submitting.
 
 ## community-plugins.json entry
 
@@ -20,7 +20,7 @@ Add this object to the end of the array in
 	"name": "Vikunja Note Tasks",
 	"author": "Malcolm Smith",
 	"description": "Create, update, and view tasks on your own self-hosted Vikunja server through explicit, user-triggered commands. Unofficial integration with no background sync, no reconciliation, and no telemetry.",
-	"repo": "USERNAME/vikunja-note-tasks"
+	"repo": "mds08011/vikunja-note-tasks"
 }
 ```
 
@@ -93,7 +93,7 @@ An empty result means the id is still free.
 later, insert e.g.:
 
 ```json
-"fundingUrl": "https://github.com/sponsors/USERNAME"
+"fundingUrl": "https://github.com/sponsors/mds08011"
 ```
 
 (or a `{ "Buy me a coffee": "https://…" }` object for multiple links).

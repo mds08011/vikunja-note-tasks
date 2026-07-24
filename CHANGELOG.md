@@ -50,4 +50,4 @@ GitHub release notes are assembled from this file.
 - Per-command walkthroughs with before/after examples in `USER_GUIDE.md`.
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
-[Unreleased]: https://github.com/USERNAME/vikunja-note-tasks/commits/main
+[Unreleased]: https://github.com/mds08011/vikunja-note-tasks/commits/main

@@ -94,7 +94,7 @@ checkboxes and never edits or deletes your text.
 
 1. Install the **BRAT** community plugin.
 2. In BRAT, "Add Beta Plugin" and enter this repository:
-   `USERNAME/vikunja-note-tasks`.
+   `mds08011/vikunja-note-tasks`.
 3. Enable **Vikunja Note Tasks** in Settings → Community plugins.
 
 ### Later: community directory
