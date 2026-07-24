@@ -77,8 +77,9 @@ An empty result means the id is still free.
 - [x] No obfuscated code; all HTTP via `requestUrl`.
 - [x] Styling via CSS classes in `styles.css` (namespaced `vnt-`), not inline
       styles injected from JS.
-- [ ] Add real screenshots/GIF to the README (replace the `docs/media/*`
-      placeholders) before submitting.
+- [x] README shows accurate illustrations of the produced Markdown
+      (`docs/media/*.svg`). Optional: add annotated in-app screenshots/GIF for
+      extra polish before submitting.
 
 ### DCO enforcement (maintainer step)
 

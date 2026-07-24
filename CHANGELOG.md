@@ -48,6 +48,8 @@ GitHub release notes are assembled from this file.
 - `docs/SUBMISSION.md` — community-plugins.json entry, id-availability check,
   submission checklist, DCO app step, and the PR procedure.
 - Per-command walkthroughs with before/after examples in `USER_GUIDE.md`.
+- README illustrations (`docs/media/*.svg`) of the capture transform and the
+  today callout.
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
 [Unreleased]: https://github.com/mds08011/vikunja-note-tasks/commits/main

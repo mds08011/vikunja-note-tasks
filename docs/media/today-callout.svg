@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="238" viewBox="0 0 820 238" role="img" aria-label="Illustration of the read-only today and overdue callout the plugin inserts">
+  <rect x="0" y="0" width="820" height="238" rx="12" fill="#202124"/>
+  <rect x="0.5" y="0.5" width="819" height="237" rx="12" fill="none" stroke="#3c4043"/>
+  <text x="28" y="40" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="15" fill="#9aa0a6">Insert today's Vikunja tasks &#8212; read-only, self-replacing block</text>
+
+  <!-- callout card -->
+  <rect x="28" y="60" width="764" height="152" rx="10" fill="#182430" stroke="#274056"/>
+  <rect x="28" y="60" width="4" height="152" rx="2" fill="#5b9bd5"/>
+
+  <text x="52" y="90" font-family="ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="700" fill="#cfe3f5">&#9744; Vikunja &#8212; due today &amp; overdue</text>
+  <text x="52" y="112" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5" font-style="italic" fill="#8aa0b4">Read-only snapshot generated 2026-07-24. Re-run to refresh.</text>
+
+  <text x="52" y="150" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14"><tspan fill="#7f8489">&#8226; </tspan><tspan fill="#e8eaed" font-weight="700">Order rebar for the footings</tspan><tspan fill="#9aa0a6"> &#183; due 2026-07-24 &#183; High priority &#183; </tspan><tspan fill="#a78bfa">open</tspan></text>
+  <text x="52" y="180" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14"><tspan fill="#7f8489">&#8226; </tspan><tspan fill="#e8eaed" font-weight="700">Submit permit application</tspan><tspan fill="#9aa0a6"> &#183; due 2026-07-22 &#183; Urgent priority &#183; </tspan><tspan fill="#a78bfa">open</tspan></text>
+</svg>

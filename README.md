@@ -13,13 +13,18 @@ a silent, magical sync you can't reason about.
 > This project is **not affiliated with or endorsed by Vikunja.** "Vikunja" is
 > used only to describe compatibility.
 
-## Screenshots
+## How it looks
 
-<!-- TODO: replace with a real screenshot before release -->
-![Creating a task from a line](docs/media/create-from-line.png)
+Capturing a line keeps your text verbatim and appends a link plus a hidden marker:
 
-<!-- TODO: replace with a real GIF before release -->
-![Inserting today's tasks](docs/media/insert-today.gif)
+![Before and after capturing a task line](docs/media/capture-before-after.svg)
+
+The read-only, self-replacing callout written by "Insert today's Vikunja tasks":
+
+![The inserted today and overdue callout](docs/media/today-callout.svg)
+
+> These are illustrations of the Markdown the plugin produces. Annotated in-app
+> screenshots are welcome — drop them into `docs/media/` and update the links.
 
 ## Quick start
 
