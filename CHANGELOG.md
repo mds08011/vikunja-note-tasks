@@ -37,6 +37,10 @@ GitHub release notes are assembled from this file.
   open-after-create toggles, and a **Test connection** button that loads projects.
 - `USER_GUIDE.md` with setup steps, the frontmatter contract, mobile toolbar
   setup, and a troubleshooting table.
+- GitHub Actions CI (typecheck, test, build) and a tag-triggered release workflow
+  that attaches `main.js`, `manifest.json`, and `styles.css` as individual assets.
+- `RELEASING.md` (including the no-`v`-prefix tag rule) and `CONTRIBUTING.md`
+  (issue-first policy and DCO sign-off).
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
 [Unreleased]: https://github.com/USERNAME/vikunja-note-tasks/commits/main

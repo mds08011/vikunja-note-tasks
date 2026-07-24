@@ -1,0 +1,54 @@
+name: Release
+
+# Triggers ONLY on tags shaped like a bare semantic version with NO "v" prefix
+# (e.g. 0.1.0). This matches the Obsidian community-plugin requirement and the
+# tag rule documented in RELEASING.md. A "v0.1.0" tag will not trigger a release.
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+      - "[0-9]+.[0-9]+.[0-9]+-*" # pre-releases, e.g. 0.1.0-beta.1
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify tag matches manifest version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
+          if [ "$TAG" != "$MANIFEST_VERSION" ]; then
+            echo "::error::Tag '$TAG' does not match manifest.json version '$MANIFEST_VERSION'."
+            echo "Tags must equal the manifest version with no 'v' prefix (see RELEASING.md)."
+            exit 1
+          fi
+
+      - name: Build
+        run: npm run build
+
+      - name: Assemble release notes from CHANGELOG
+        run: |
+          node scripts/extract-changelog.mjs "${GITHUB_REF_NAME}" > RELEASE_NOTES.md \
+            || echo "See CHANGELOG.md for details." > RELEASE_NOTES.md
+
+      - name: Create GitHub release with assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file RELEASE_NOTES.md \
+            main.js manifest.json styles.css
