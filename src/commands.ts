@@ -219,3 +219,73 @@ export async function setTaskDoneOnLine(
 		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
 	}
 }
+
+/**
+ * "Refresh Vikunja task statuses in note": for every marker, fetch the current
+ * done-state and mirror it onto the local checkbox. Vikunja is authoritative
+ * here — but a task that 404s (deleted remotely) is only *reported*; its line is
+ * never altered or deleted.
+ */
+export async function refreshStatuses(
+	plugin: VikunjaNoteTasksPlugin,
+	editor: Editor,
+): Promise<void> {
+	const client = plugin.getClient();
+	try {
+		client.ensureConfigured();
+	} catch (err) {
+		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
+		return;
+	}
+
+	const markers: { line: number; id: number }[] = [];
+	const lineCount = editor.lineCount();
+	for (let i = 0; i < lineCount; i++) {
+		const id = getMarkerId(editor.getLine(i));
+		if (id !== null) markers.push({ line: i, id });
+	}
+
+	if (markers.length === 0) {
+		new Notice("Vikunja: no task markers in this note.");
+		return;
+	}
+
+	let updated = 0;
+	let unchanged = 0;
+	const missing: number[] = [];
+	try {
+		for (const marker of markers) {
+			let done: boolean;
+			try {
+				done = (await client.getTask(marker.id)).done;
+			} catch (err) {
+				if (err instanceof VikunjaApiError && err.kind === "not-found") {
+					missing.push(marker.id);
+					continue; // never touch the line for a deleted task
+				}
+				throw err;
+			}
+			const lineText = editor.getLine(marker.line);
+			const next = setCheckboxState(lineText, done);
+			if (next !== lineText) {
+				replaceLine(editor, marker.line, next);
+				updated++;
+			} else {
+				unchanged++;
+			}
+		}
+	} catch (err) {
+		new Notice(
+			`Vikunja: ${describeVikunjaError(err)} Stopped after updating ${updated}.`,
+		);
+		return;
+	}
+
+	let message = `refreshed — ${updated} updated, ${unchanged} unchanged`;
+	if (missing.length > 0) {
+		message +=
+			`; ${missing.length} not found in Vikunja ` +
+			`(IDs ${missing.join(", ")}), lines left untouched`;
+	}
+	new Notice(`Vikunja: ${message}.`);
+}

@@ -18,6 +18,9 @@ GitHub release notes are assembled from this file.
   every unmarked `- [ ]` line, rewrites each, and reports "Created N, skipped M".
 - Commands: **Mark Vikunja task done** and **Toggle Vikunja task done/undone** —
   set/flip the done state in Vikunja and mirror it onto the local checkbox.
+- Command: **Refresh Vikunja task statuses in note** — mirrors each marked task's
+  current done-state onto its local checkbox; deleted (404) tasks are reported,
+  never altered or removed from the note.
 - Project scaffold: TypeScript + esbuild build, Obsidian sample-plugin layout,
   GPL-3.0-or-later license.
 - Pure line/marker logic (`src/markers.ts`) and today-callout rendering

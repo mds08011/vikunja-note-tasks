@@ -4,6 +4,7 @@ import { VikunjaSettingTab } from "./settings";
 import {
 	createFromSelectionOrLine,
 	pushAllOpenTasks,
+	refreshStatuses,
 	setTaskDoneOnLine,
 } from "./commands";
 
@@ -72,6 +73,12 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 			name: "Toggle Vikunja task done/undone",
 			editorCallback: (editor: Editor) =>
 				setTaskDoneOnLine(this, editor, "toggle"),
+		});
+
+		this.addCommand({
+			id: "refresh-task-statuses",
+			name: "Refresh Vikunja task statuses in note",
+			editorCallback: (editor: Editor) => refreshStatuses(this, editor),
 		});
 	}
 
