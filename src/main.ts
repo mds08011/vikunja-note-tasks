@@ -3,6 +3,7 @@ import { VikunjaClient } from "./api";
 import { VikunjaSettingTab } from "./settings";
 import {
 	createFromSelectionOrLine,
+	insertTodayTasks,
 	pushAllOpenTasks,
 	refreshStatuses,
 	setTaskDoneOnLine,
@@ -79,6 +80,12 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 			id: "refresh-task-statuses",
 			name: "Refresh Vikunja task statuses in note",
 			editorCallback: (editor: Editor) => refreshStatuses(this, editor),
+		});
+
+		this.addCommand({
+			id: "insert-today-tasks",
+			name: "Insert today's Vikunja tasks",
+			editorCallback: (editor: Editor) => insertTodayTasks(this, editor),
 		});
 	}
 

@@ -21,6 +21,9 @@ GitHub release notes are assembled from this file.
 - Command: **Refresh Vikunja task statuses in note** — mirrors each marked task's
   current done-state onto its local checkbox; deleted (404) tasks are reported,
   never altered or removed from the note.
+- Command: **Insert today's Vikunja tasks** — writes a read-only, self-replacing
+  callout of tasks due today or overdue (optionally including undated), each with
+  due date, priority, and a web-UI link.
 - Project scaffold: TypeScript + esbuild build, Obsidian sample-plugin layout,
   GPL-3.0-or-later license.
 - Pure line/marker logic (`src/markers.ts`) and today-callout rendering

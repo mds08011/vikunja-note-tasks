@@ -3,6 +3,7 @@ import type VikunjaNoteTasksPlugin from "./main";
 import { VikunjaClient, VikunjaApiError, describeVikunjaError } from "./api";
 import {
 	extractTitle,
+	findTodayBlock,
 	getCheckboxState,
 	getMarkerId,
 	hasMarker,
@@ -10,7 +11,7 @@ import {
 	rewriteLineWithTask,
 	setCheckboxState,
 } from "./markers";
-import { taskWebUrl } from "./render";
+import { hasRealDate, renderTodayBlock, taskWebUrl } from "./render";
 import { parseCsvList, dedupeCaseInsensitive, summarize } from "./util";
 import type { VikunjaTask } from "./types";
 
@@ -288,4 +289,71 @@ export async function refreshStatuses(
 			`(IDs ${missing.join(", ")}), lines left untouched`;
 	}
 	new Notice(`Vikunja: ${message}.`);
+}
+
+/** Local calendar date as YYYY-MM-DD (not UTC), for the block subtitle. */
+function localToday(): string {
+	const d = new Date();
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Orders tasks by due date ascending, with undated tasks last. */
+function sortByDue(a: VikunjaTask, b: VikunjaTask): number {
+	const ad = hasRealDate(a.due_date);
+	const bd = hasRealDate(b.due_date);
+	if (ad && bd) return (a.due_date as string).localeCompare(b.due_date as string);
+	if (ad) return -1;
+	if (bd) return 1;
+	return 0;
+}
+
+/**
+ * "Insert today's Vikunja tasks": fetches tasks due today or overdue (optionally
+ * including undated) and writes a read-only callout fenced by begin/end comment
+ * markers. Re-running replaces the existing block in place instead of
+ * duplicating it.
+ */
+export async function insertTodayTasks(
+	plugin: VikunjaNoteTasksPlugin,
+	editor: Editor,
+): Promise<void> {
+	try {
+		const client = plugin.getClient();
+		client.ensureConfigured();
+
+		const timezone =
+			Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+		const fetched = await client.listTodayTasks(timezone);
+
+		const includeUndated = plugin.settings.includeUndated;
+		const filtered = includeUndated
+			? fetched
+			: fetched.filter((t) => hasRealDate(t.due_date));
+		const ordered = [...filtered].sort(sortByDue);
+
+		const block = renderTodayBlock(ordered, {
+			baseUrl: plugin.settings.baseUrl,
+			generatedOn: localToday(),
+			includeUndated,
+		});
+
+		const content = editor.getValue();
+		const loc = findTodayBlock(content);
+		if (loc) {
+			editor.replaceRange(
+				block,
+				editor.offsetToPos(loc.start),
+				editor.offsetToPos(loc.end),
+			);
+			new Notice(`Vikunja: updated today block (${ordered.length} task(s)).`);
+		} else {
+			const cursor = editor.getCursor();
+			const prefix = cursor.ch === 0 ? "" : "\n";
+			editor.replaceRange(`${prefix}${block}\n`, cursor);
+			new Notice(`Vikunja: inserted today block (${ordered.length} task(s)).`);
+		}
+	} catch (err) {
+		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
+	}
 }
