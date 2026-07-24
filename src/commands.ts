@@ -1,9 +1,14 @@
 import { Editor, Notice } from "obsidian";
 import type VikunjaNoteTasksPlugin from "./main";
 import { VikunjaClient, VikunjaApiError, describeVikunjaError } from "./api";
-import { extractTitle, hasMarker, rewriteLineWithTask } from "./markers";
+import {
+	extractTitle,
+	hasMarker,
+	isUncheckedTaskLine,
+	rewriteLineWithTask,
+} from "./markers";
 import { taskWebUrl } from "./render";
-import { parseCsvList, dedupeCaseInsensitive } from "./util";
+import { parseCsvList, dedupeCaseInsensitive, summarize } from "./util";
 import type { VikunjaTask } from "./types";
 
 /** Replaces exactly one line, leaving every other character in the note intact. */
@@ -35,11 +40,23 @@ async function resolveLabelIds(
 	return ids;
 }
 
-/** Creates a task in the default project and applies the default labels. */
-async function createTaskWithDefaults(
+/** Resolves the configured default labels to ids once, creating any missing. */
+async function ensureDefaultLabelIds(
+	plugin: VikunjaNoteTasksPlugin,
+	client: VikunjaClient,
+): Promise<number[]> {
+	const names = dedupeCaseInsensitive(
+		parseCsvList(plugin.settings.defaultLabels),
+	);
+	return resolveLabelIds(client, names);
+}
+
+/** Creates one task in the default project and attaches the given labels. */
+async function createOneTask(
 	plugin: VikunjaNoteTasksPlugin,
 	client: VikunjaClient,
 	title: string,
+	labelIds: number[],
 ): Promise<VikunjaTask> {
 	const projectId = plugin.settings.defaultProjectId;
 	if (projectId === null) {
@@ -49,14 +66,8 @@ async function createTaskWithDefaults(
 		);
 	}
 	const task = await client.createTask(projectId, { title });
-	const labelNames = dedupeCaseInsensitive(
-		parseCsvList(plugin.settings.defaultLabels),
-	);
-	if (labelNames.length > 0) {
-		const labelIds = await resolveLabelIds(client, labelNames);
-		for (const id of labelIds) {
-			await client.addLabelToTask(task.id, id);
-		}
+	for (const id of labelIds) {
+		await client.addLabelToTask(task.id, id);
 	}
 	return task;
 }
@@ -91,7 +102,8 @@ export async function createFromSelectionOrLine(
 			return;
 		}
 
-		const task = await createTaskWithDefaults(plugin, client, title);
+		const labelIds = await ensureDefaultLabelIds(plugin, client);
+		const task = await createOneTask(plugin, client, title, labelIds);
 		const url = taskWebUrl(plugin.settings.baseUrl, task.id);
 		replaceLine(editor, lineIndex, rewriteLineWithTask(lineText, task.id, url));
 		new Notice(`Vikunja: created task #${task.id}.`);
@@ -101,5 +113,67 @@ export async function createFromSelectionOrLine(
 		}
 	} catch (err) {
 		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
+	}
+}
+
+/**
+ * "Push all open tasks in note to Vikunja": creates a task for every unchecked
+ * `- [ ]` line that has no marker yet, rewrites each in place, and reports a
+ * summary. Already-marked open tasks are skipped, never duplicated.
+ */
+export async function pushAllOpenTasks(
+	plugin: VikunjaNoteTasksPlugin,
+	editor: Editor,
+): Promise<void> {
+	const client = plugin.getClient();
+	try {
+		client.ensureConfigured();
+	} catch (err) {
+		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
+		return;
+	}
+
+	const targets: number[] = [];
+	let skipped = 0;
+	const lineCount = editor.lineCount();
+	for (let i = 0; i < lineCount; i++) {
+		const text = editor.getLine(i);
+		if (isUncheckedTaskLine(text)) {
+			if (hasMarker(text)) skipped++;
+			else targets.push(i);
+		}
+	}
+
+	if (targets.length === 0) {
+		const tail = skipped > 0 ? ` (${skipped} already captured)` : "";
+		new Notice(`Vikunja: no unmarked open tasks found${tail}.`);
+		return;
+	}
+
+	let created = 0;
+	try {
+		const labelIds = await ensureDefaultLabelIds(plugin, client);
+		for (const i of targets) {
+			const lineText = editor.getLine(i);
+			// Re-check in case the note changed since scanning.
+			if (hasMarker(lineText) || !isUncheckedTaskLine(lineText)) {
+				skipped++;
+				continue;
+			}
+			const title = extractTitle(lineText);
+			if (!title) {
+				skipped++;
+				continue;
+			}
+			const task = await createOneTask(plugin, client, title, labelIds);
+			const url = taskWebUrl(plugin.settings.baseUrl, task.id);
+			replaceLine(editor, i, rewriteLineWithTask(lineText, task.id, url));
+			created++;
+		}
+		new Notice(`Vikunja: ${summarize(created, skipped)}`);
+	} catch (err) {
+		new Notice(
+			`Vikunja: ${describeVikunjaError(err)} Created ${created} before stopping.`,
+		);
 	}
 }

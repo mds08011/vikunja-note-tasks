@@ -1,7 +1,7 @@
 import { Editor, Plugin } from "obsidian";
 import { VikunjaClient } from "./api";
 import { VikunjaSettingTab } from "./settings";
-import { createFromSelectionOrLine } from "./commands";
+import { createFromSelectionOrLine, pushAllOpenTasks } from "./commands";
 
 /** A cached (id, title) pair for the project dropdown. */
 export interface CachedProject {
@@ -48,6 +48,12 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 			name: "Create task from selection or line",
 			editorCallback: (editor: Editor) =>
 				createFromSelectionOrLine(this, editor),
+		});
+
+		this.addCommand({
+			id: "push-all-open-tasks",
+			name: "Push all open tasks in note to Vikunja",
+			editorCallback: (editor: Editor) => pushAllOpenTasks(this, editor),
 		});
 	}
 
