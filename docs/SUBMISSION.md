@@ -81,12 +81,12 @@ An empty result means the id is still free.
       (`docs/media/*.svg`). Optional: add annotated in-app screenshots/GIF for
       extra polish before submitting.
 
-### DCO enforcement (maintainer step)
+### DCO enforcement
 
-- [ ] Install the **DCO GitHub App** on the repository:
-      <https://github.com/apps/dco>. It enforces `Signed-off-by` on external PRs,
-      matching the policy in [`CONTRIBUTING.md`](../CONTRIBUTING.md). This is a
-      manual, one-time step.
+- [x] DCO is enforced by a **self-contained GitHub Action**
+      (`.github/workflows/dco.yml`) — every non-merge commit in a PR must carry a
+      `Signed-off-by` line matching its author. No third-party app to install,
+      matching the policy in [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ### fundingUrl (optional, later)
 

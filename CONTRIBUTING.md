@@ -49,10 +49,10 @@ git commit -s -m "Your message"
 The `-s` flag appends a `Signed-off-by: Your Name <you@example.com>` trailer,
 which asserts the [Developer Certificate of Origin](https://developercertificate.org/).
 
-A **DCO GitHub App** enforces this on pull requests: unsigned commits will fail
-the DCO check. (Installing the app on the repository is a one-time maintainer
-step — it's listed in the submission checklist in
-[`docs/SUBMISSION.md`](docs/SUBMISSION.md).)
+A **DCO check runs in CI** (`.github/workflows/dco.yml`) — a self-contained
+GitHub Action, no third-party app to install. Every non-merge commit in a pull
+request must carry a `Signed-off-by` line matching its author, or the check
+fails. Make sure your git `user.name`/`user.email` match the sign-off.
 
 If you forgot to sign off, amend or rebase with `-s` and force-push **your own PR
 branch** (never a shared branch).

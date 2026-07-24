@@ -41,6 +41,8 @@ GitHub release notes are assembled from this file.
   that attaches `main.js`, `manifest.json`, and `styles.css` as individual assets.
 - `RELEASING.md` (including the no-`v`-prefix tag rule) and `CONTRIBUTING.md`
   (issue-first policy and DCO sign-off).
+- Self-contained DCO sign-off check as a GitHub Action (`.github/workflows/dco.yml`),
+  no third-party app required.
 - Example note templates in `docs/templates/` for two fictional projects
   demonstrating the frontmatter contract and the task-per-line pattern.
 - Architecture decision records in `docs/adr/` (explicit-actions-only, marker
