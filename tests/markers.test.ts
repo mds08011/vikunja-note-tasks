@@ -128,6 +128,24 @@ test("rewrite then getMarkerId is a stable round-trip (idempotency guard)", () =
 	assert.equal(getMarkerId(rewritten), 42);
 });
 
+test("extractTitle is empty when a line carries only artifacts", () => {
+	assert.equal(
+		extractTitle("- [ ] [vk](https://h/tasks/8) <!--vk:8-->"),
+		"",
+	);
+});
+
+test("getMarkerId returns the first id when several are present", () => {
+	assert.equal(getMarkerId("x <!--vk:3--> y <!--vk:9-->"), 3);
+});
+
+test("marker guard: a rewritten line is never eligible for re-creation", () => {
+	const line = rewriteLineWithTask("- [ ] Task", 1, "https://h/tasks/1");
+	// isUncheckedTaskLine is still true, but hasMarker gates creation.
+	assert.equal(isUncheckedTaskLine(line), true);
+	assert.equal(hasMarker(line), true);
+});
+
 test("findTodayBlock locates the fenced block", () => {
 	const content = `intro\n${TODAY_BLOCK_BEGIN}\n> body\n${TODAY_BLOCK_END}\noutro`;
 	const loc = findTodayBlock(content);
