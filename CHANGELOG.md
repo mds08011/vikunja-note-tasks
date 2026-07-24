@@ -41,6 +41,8 @@ GitHub release notes are assembled from this file.
   that attaches `main.js`, `manifest.json`, and `styles.css` as individual assets.
 - `RELEASING.md` (including the no-`v`-prefix tag rule) and `CONTRIBUTING.md`
   (issue-first policy and DCO sign-off).
+- Example note templates in `docs/templates/` for two fictional projects
+  demonstrating the frontmatter contract and the task-per-line pattern.
 - Repository conventions (`CLAUDE.md`, `AGENTS.md`) and base documentation.
 
 [Unreleased]: https://github.com/USERNAME/vikunja-note-tasks/commits/main
