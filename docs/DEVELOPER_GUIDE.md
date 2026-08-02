@@ -161,3 +161,8 @@ npm test        # node --import tsx --test tests/*.test.ts
 
 No test makes a live API call. I/O-bearing modules (`api.ts`) are kept thin so
 the risky logic lives in the pure, tested modules.
+
+What that leaves untested by construction: modals (`pickers.ts`), the settings
+tab, `requestUrl` itself, the metadata cache, and every timezone-dependent
+result. [`manual-verification.md`](manual-verification.md) is the checklist that
+covers those before a release.

@@ -19,6 +19,10 @@ workflow:
 
 1. **Make sure `main` is green.** CI (typecheck, test, build) must pass.
 
+   Then work through [`docs/manual-verification.md`](docs/manual-verification.md)
+   in a scratch vault. The unit tests can't reach modals, the settings tab, live
+   HTTP, or anything timezone-dependent, so that pass is the only check on them.
+
 2. **Pick the version** and update the three version files consistently. The
    easiest way is:
 

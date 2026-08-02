@@ -330,14 +330,17 @@ export async function createFromSelectionOrLine(
 	try {
 		const client = plugin.getClient();
 		client.ensureConfigured();
-		const { route, noteLabels } = contextForNote(plugin, file);
 
+		// Resolve the line before the routing rules: on an already-captured line
+		// the useful message is "already captured", not a lecture about project
+		// configuration. The picker variant orders these the same way.
 		const resolved = resolveCaptureTarget(plugin, editor);
 		if (!resolved.ok) {
 			new Notice(`Vikunja: ${resolved.message}`);
 			return;
 		}
 
+		const { route, noteLabels } = contextForNote(plugin, file);
 		await captureTarget(
 			plugin,
 			client,

@@ -35,6 +35,14 @@ GitHub release notes are assembled from this file.
   `#tags` on a captured line become labels on that task. Merge order is settings
   defaults → note labels → line tags, de-duplicated ignoring case.
 
+### Fixed
+
+- The project picker no longer risks discarding a choice on Obsidian builds that
+  close a modal before reporting the selection.
+- "Create task from selection or line" now reports "already captured" on a
+  marked line even when the note's routing is misconfigured, matching the order
+  the picker variant already used.
+
 ### Changed
 
 - A `vikunja-project` frontmatter value that isn't a numeric project ID now stops

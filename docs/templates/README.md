@@ -5,8 +5,9 @@ vault. They demonstrate the patterns this plugin is built around:
 
 - **A task is a line until it accrues artifacts.** The line is the task of record;
   when it grows, it gets a `→ [[Wikilink]]` pointer to a note holding the details.
-- **The `vikunja-*` frontmatter contract** (documented in 0.1; routing ships in
-  0.2). See [USER_GUIDE.md](../../USER_GUIDE.md#frontmatter-contract).
+- **The `vikunja-*` frontmatter contract** — `vikunja-project` routes every
+  capture in the note, and `vikunja-labels` labels it. See
+  [USER_GUIDE.md](../../USER_GUIDE.md#frontmatter-contract).
 - **What a line looks like before and after capture** — some lines below already
   carry a `[vk](…) <!--vk:id-->` marker to show the "after" state.
 

@@ -56,11 +56,21 @@ export function pickProject(
 ): Promise<CachedProject | null> {
 	return new Promise((resolve) => {
 		let settled = false;
-		const modal = new ProjectPickerModal(app, projects, (project) => {
-			// Guard against the callback firing twice (choose, then close).
+		const settle = (project: CachedProject | null) => {
 			if (settled) return;
 			settled = true;
 			resolve(project);
+		};
+		const modal = new ProjectPickerModal(app, projects, (project) => {
+			if (project !== null) {
+				settle(project);
+				return;
+			}
+			// A cancel is only real if no choice arrives in the same tick. Obsidian
+			// does not promise that onChooseItem runs before onClose, and resolving
+			// null synchronously would silently swallow a choice on any version
+			// that closes first.
+			window.setTimeout(() => settle(null), 0);
 		});
 		modal.open();
 	});
