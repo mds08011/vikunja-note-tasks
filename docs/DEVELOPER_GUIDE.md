@@ -13,6 +13,7 @@ Everything a contributor needs to understand the codebase. Pair this with
 | `src/render.ts` | no | Pure rendering of the read-only "today" callout. **Unit-tested.** |
 | `src/routing.ts` | no | Pure capture routing: folder globs and the resolution order. **Unit-tested.** |
 | `src/api.ts` | `requestUrl` only | Thin typed Vikunja REST client + typed error class. |
+| `src/pickers.ts` | yes | Fuzzy project picker modal, promise-wrapped. |
 | `src/settings.ts` | yes | Settings tab UI and connection test. |
 | `src/main.ts` | yes | Plugin entry point; wires commands to logic. |
 
@@ -84,8 +85,11 @@ punctuation are preserved (they are part of the title).
 the module is Obsidian-free, and `api.ts` (which owns `VikunjaApiError`) imports
 `requestUrl`. `commands.ts` maps a failed outcome onto a `config` error.
 
-- **Order:** frontmatter `vikunja-project` → first matching folder rule → default
-  project. First answer wins.
+- **Order:** an explicit pick from "Create task in project…" → frontmatter
+  `vikunja-project` → first matching folder rule → default project. First answer
+  wins. A pick is passed to `contextForNote` as `pickedProjectId` and short-
+  circuits the rules entirely; it never suppresses note labels, because choosing
+  a project is not a statement about labels.
 - **A malformed `vikunja-project` is an error, not a fallback.** Falling through
   to the default project would create the task somewhere the note explicitly
   disclaimed. An *absent or empty* key is "no opinion" and falls through normally
@@ -93,6 +97,11 @@ the module is Obsidian-free, and `api.ts` (which owns `VikunjaApiError`) imports
 - **Routing resolves once per command invocation**, before any network call, so a
   batch push cannot create tasks in two different projects or fail halfway on a
   routing problem.
+- **A modal is an async gap.** `resolveCaptureTarget` runs *before* the picker
+  opens (so the modal never appears when there is nothing to capture), and the
+  target line is compared against its captured text *after* the picker closes.
+  If it changed — edited in another pane, or the note reorganised — the command
+  reports that and creates nothing, rather than rewriting a line it never read.
 - **Glob semantics:** a pattern without `/` matches any single folder *name* at
   any depth (so a folder can move between parents without breaking routing); a
   pattern with `/` matches the full folder path. `*` stays within a segment, `**`

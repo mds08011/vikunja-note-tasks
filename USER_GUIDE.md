@@ -68,8 +68,9 @@ hotkey** — assign your own in **Settings → Hotkeys** if you like.
 ### Create task from selection or line
 
 Put your cursor on a task line (or select the text you want as the title) and run
-the command. The plugin creates the task in your default project, applies your
-default labels, and rewrites the line.
+the command. The plugin creates the task in the project this note
+[routes to](#capture-routing), applies the note's and the line's
+[labels](#labels), and rewrites the line.
 
 **Before:**
 
@@ -100,11 +101,28 @@ Notes:
   - [ ] Pour footing [vk](https://vikunja.example.com/tasks/9) <!--vk:9--> → [[Footing pour details]]
   ```
 
+### Create task in project…
+
+The same capture, except a fuzzy picker opens and asks which project to use. Type
+to filter, `Enter` to choose, `Esc` to cancel — cancelling creates nothing.
+
+Use it for the one-off that doesn't belong where the note normally routes: a task
+you happen to be writing in a meeting note but that belongs to a different job.
+Your choice **overrides** the note's `vikunja-project` and any folder rule, for
+that one task only. Nothing about the note changes.
+
+Labels are unaffected — you picked a project, not a label set, so the note's
+`vikunja-labels` and the line's `#tags` still apply.
+
+If the project list is empty, the command fetches it for you rather than making
+you visit settings first; that also fills the **Default project** dropdown.
+
 ### Push all open tasks in note to Vikunja
 
 Scans the whole note and creates a task for every unchecked `- [ ]` line that
 doesn't already have a marker, rewriting each. Lines that already have a marker
-are skipped. You get a summary like **"Created 4, skipped 1."**
+are skipped. You get a summary like **"Created 4, skipped 1."** Every line in one
+run goes to the same project — use "Create task in project…" for exceptions.
 
 ### Mark Vikunja task done
 
@@ -177,13 +195,14 @@ vikunja-labels:               # merged with the settings' default labels
 
 ## Capture routing
 
-Both creating commands — "Create task from selection or line" and "Push all open
-tasks in note to Vikunja" — decide where the task goes in this order, stopping at
-the first answer:
+The creating commands decide where a task goes in this order, stopping at the
+first answer:
 
-1. **`vikunja-project` in the note's frontmatter.**
-2. **The first matching folder rule**, in the order you listed them in settings.
-3. **The default project** from settings.
+1. **A project you picked** with "Create task in project…" — that command asks
+   every time, and your choice wins over everything below for that one task.
+2. **`vikunja-project` in the note's frontmatter.**
+3. **The first matching folder rule**, in the order you listed them in settings.
+4. **The default project** from settings.
 
 Every success Notice names the destination and the step that chose it, e.g.
 `created task #123 in Website (#7) via folder rule "1204 *"`, so a

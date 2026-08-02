@@ -4,6 +4,7 @@ import { VikunjaClient } from "./api";
 import { VikunjaSettingTab } from "./settings";
 import {
 	createFromSelectionOrLine,
+	createInPickedProject,
 	insertTodayTasks,
 	openTaskInBrowser,
 	pushAllOpenTasks,
@@ -65,6 +66,13 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 			name: "Create task from selection or line",
 			editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) =>
 				createFromSelectionOrLine(this, editor, ctx.file),
+		});
+
+		this.addCommand({
+			id: "create-task-in-picked-project",
+			name: "Create task in project…",
+			editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) =>
+				createInPickedProject(this, editor, ctx.file),
 		});
 
 		this.addCommand({

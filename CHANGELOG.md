@@ -21,6 +21,10 @@ GitHub release notes are assembled from this file.
   full folder path.
 - `src/routing.ts`, a new Obsidian-free module holding the glob matching and
   resolution order, with unit tests.
+- Command: **Create task in project…** — a fuzzy picker over your Vikunja
+  projects chooses where this one task goes, overriding frontmatter and folder
+  rules without changing the note. Cancelling creates nothing; an empty project
+  list is fetched on demand rather than sending you to settings.
 - **Labels from the note and the line.** `vikunja-labels` frontmatter (a YAML
   list or a comma-separated string) applies to every capture in a note, and
   `#tags` on a captured line become labels on that task. Merge order is settings

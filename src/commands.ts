@@ -1,7 +1,9 @@
 import { Editor, Notice } from "obsidian";
 import type { TFile } from "obsidian";
 import type VikunjaNoteTasksPlugin from "./main";
+import type { CachedProject } from "./main";
 import { VikunjaClient, VikunjaApiError, describeVikunjaError } from "./api";
+import { pickProject } from "./pickers";
 import {
 	extractTags,
 	extractTitle,
@@ -117,6 +119,29 @@ interface Route {
 	description: string;
 }
 
+/**
+ * The project list for the picker. Uses the cache the settings tab fills, and
+ * fetches it when empty: the user has explicitly invoked a command, so a
+ * network call is exactly what they asked for — better than telling them to go
+ * press "Test connection" first. A successful fetch updates the cache, which
+ * also fixes the settings dropdown and the project names shown in notices.
+ */
+async function ensureProjectList(
+	plugin: VikunjaNoteTasksPlugin,
+	client: VikunjaClient,
+): Promise<CachedProject[]> {
+	if (plugin.settings.cachedProjects.length > 0) {
+		return plugin.settings.cachedProjects;
+	}
+	const fetched = await client.listProjects();
+	plugin.settings.cachedProjects = fetched.map((p) => ({
+		id: p.id,
+		title: p.title,
+	}));
+	await plugin.saveSettings();
+	return plugin.settings.cachedProjects;
+}
+
 /** Names a project by its cached title when known, by id otherwise. */
 function projectLabel(plugin: VikunjaNoteTasksPlugin, id: number): string {
 	const found = plugin.settings.cachedProjects.find((p) => p.id === id);
@@ -139,11 +164,25 @@ interface NoteContext {
 function contextForNote(
 	plugin: VikunjaNoteTasksPlugin,
 	file: TFile | null,
+	pickedProjectId?: number,
 ): NoteContext {
 	const frontmatter = file
 		? plugin.app.metadataCache.getFileCache(file)?.frontmatter
 		: undefined;
 	const noteLabels = parseFrontmatterLabels(frontmatter?.[LABELS_KEY]);
+
+	// An explicit pick outranks every rule: the user just said where it goes.
+	// Note labels still apply — the pick chose a project, not a label set.
+	if (pickedProjectId !== undefined) {
+		return {
+			route: {
+				projectId: pickedProjectId,
+				description: `${projectLabel(plugin, pickedProjectId)} (picked)`,
+			},
+			noteLabels,
+		};
+	}
+
 	const { mappings } = parseFolderMappings(plugin.settings.folderMappings);
 
 	const outcome = resolveProject({
@@ -181,6 +220,76 @@ function contextForNote(
 	};
 }
 
+/** The line a capture will act on, resolved before any network call. */
+interface CaptureTarget {
+	lineIndex: number;
+	lineText: string;
+	/** Selection when there is one, else the whole line — tags come from this. */
+	titleSource: string;
+	title: string;
+}
+
+/**
+ * Works out what the cursor (or selection) is asking to capture, or explains
+ * why nothing can be. Pure with respect to the network: safe to call before
+ * opening a modal.
+ */
+function resolveCaptureTarget(
+	editor: Editor,
+): { ok: true; target: CaptureTarget } | { ok: false; message: string } {
+	const lineIndex = editor.getCursor("from").line;
+	const lineText = editor.getLine(lineIndex);
+
+	if (hasMarker(lineText)) {
+		return { ok: false, message: "this line is already captured." };
+	}
+
+	const selection = editor.getSelection();
+	const titleSource =
+		selection && selection.trim().length > 0 ? selection : lineText;
+	const title = extractTitle(titleSource);
+	if (!title) {
+		return { ok: false, message: "nothing to create — no task text found." };
+	}
+	return { ok: true, target: { lineIndex, lineText, titleSource, title } };
+}
+
+/**
+ * Creates the task for one resolved target and rewrites its line. Shared by the
+ * plain create command and the project-picker variant so there is exactly one
+ * creation path.
+ */
+async function captureTarget(
+	plugin: VikunjaNoteTasksPlugin,
+	client: VikunjaClient,
+	editor: Editor,
+	target: CaptureTarget,
+	route: Route,
+	noteLabels: string[],
+): Promise<void> {
+	// Tags come from the same text the title did, so a selection's tags apply.
+	const labelIds = await new LabelResolver(client).idsFor(
+		labelNamesFor(plugin, noteLabels, target.titleSource),
+	);
+	const task = await createOneTask(
+		client,
+		route.projectId,
+		target.title,
+		labelIds,
+	);
+	const url = taskWebUrl(plugin.settings.baseUrl, task.id);
+	replaceLine(
+		editor,
+		target.lineIndex,
+		rewriteLineWithTask(target.lineText, task.id, url),
+	);
+	new Notice(`Vikunja: created task #${task.id} in ${route.description}.`);
+
+	if (plugin.settings.openInBrowserAfterCreate) {
+		window.open(url, "_blank");
+	}
+}
+
 /**
  * "Create Vikunja task from selection or line": creates a task from the
  * selection (or the current line), then rewrites that line in place with a link
@@ -199,40 +308,67 @@ export async function createFromSelectionOrLine(
 		client.ensureConfigured();
 		const { route, noteLabels } = contextForNote(plugin, file);
 
-		const lineIndex = editor.getCursor("from").line;
-		const lineText = editor.getLine(lineIndex);
-
-		if (hasMarker(lineText)) {
-			new Notice("Vikunja: this line is already captured.");
+		const resolved = resolveCaptureTarget(editor);
+		if (!resolved.ok) {
+			new Notice(`Vikunja: ${resolved.message}`);
 			return;
 		}
 
-		const selection = editor.getSelection();
-		const titleSource =
-			selection && selection.trim().length > 0 ? selection : lineText;
-		const title = extractTitle(titleSource);
-		if (!title) {
-			new Notice("Vikunja: nothing to create — no task text found.");
-			return;
-		}
-
-		// Tags come from the same text the title did, so a selection's tags apply.
-		const labelIds = await new LabelResolver(client).idsFor(
-			labelNamesFor(plugin, noteLabels, titleSource),
-		);
-		const task = await createOneTask(
+		await captureTarget(
+			plugin,
 			client,
-			route.projectId,
-			title,
-			labelIds,
+			editor,
+			resolved.target,
+			route,
+			noteLabels,
 		);
-		const url = taskWebUrl(plugin.settings.baseUrl, task.id);
-		replaceLine(editor, lineIndex, rewriteLineWithTask(lineText, task.id, url));
-		new Notice(`Vikunja: created task #${task.id} in ${route.description}.`);
+	} catch (err) {
+		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
+	}
+}
 
-		if (plugin.settings.openInBrowserAfterCreate) {
-			window.open(url, "_blank");
+/**
+ * "Create Vikunja task in project…": same capture, but a fuzzy picker chooses
+ * the project, overriding frontmatter and folder rules for this one task.
+ *
+ * The picker is only opened once there is something to capture, and the line is
+ * re-checked after it closes: the modal is an async gap during which the note
+ * can change (or the same note can be edited in another pane).
+ */
+export async function createInPickedProject(
+	plugin: VikunjaNoteTasksPlugin,
+	editor: Editor,
+	file: TFile | null,
+): Promise<void> {
+	try {
+		const client = plugin.getClient();
+		client.ensureConfigured();
+
+		const resolved = resolveCaptureTarget(editor);
+		if (!resolved.ok) {
+			new Notice(`Vikunja: ${resolved.message}`);
+			return;
 		}
+
+		const projects = await ensureProjectList(plugin, client);
+		if (projects.length === 0) {
+			new Notice("Vikunja: no projects available for this API token.");
+			return;
+		}
+
+		const picked = await pickProject(plugin.app, projects);
+		if (!picked) return; // cancelled — silent by design
+
+		const target = resolved.target;
+		if (editor.getLine(target.lineIndex) !== target.lineText) {
+			new Notice(
+				"Vikunja: that line changed while the picker was open — nothing was created.",
+			);
+			return;
+		}
+
+		const { route, noteLabels } = contextForNote(plugin, file, picked.id);
+		await captureTarget(plugin, client, editor, target, route, noteLabels);
 	} catch (err) {
 		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
 	}

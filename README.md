@@ -52,6 +52,7 @@ guidelines) — assign your own if you like.
 | Command | What it does |
 | --- | --- |
 | Create task from selection or line | Creates a Vikunja task from the selection or current line and rewrites the line with a link + marker. |
+| Create task in project… | Same, but a fuzzy picker chooses the project for this one task, overriding frontmatter and folder rules. |
 | Push all open tasks in note to Vikunja | Creates a task for every unmarked `- [ ]` line, rewrites each, and shows a summary. |
 | Mark Vikunja task done | Sets the current line's task done in Vikunja and flips the checkbox to `- [x]`. |
 | Toggle Vikunja task done/undone | Same, in either direction. |
