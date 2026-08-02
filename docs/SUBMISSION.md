@@ -8,6 +8,11 @@ when you're ready.
 > Confirm the **author** name (`Malcolm Smith`, from git config) is how you want to
 > be credited in `manifest.json` and the entry below before submitting.
 
+**Status (2026-08-02): every required checklist item below is met.** The blocking
+work is done — what remains is the human steps in
+[PR steps](#pr-steps-against-obsidianmdobsidian-releases), plus one *optional*
+polish item (annotated in-app screenshots, under Developer policies).
+
 ## community-plugins.json entry
 
 Add this object to the end of the array in
@@ -29,7 +34,7 @@ Add this object to the end of the array in
 
 ## ID availability (verified)
 
-Checked against `community-plugins.json` (6,009 plugins at time of writing):
+Last checked against `community-plugins.json` on **2026-08-02** (6,277 plugins):
 
 - `vikunja-note-tasks` — **not taken.** ✅
 - The only existing Vikunja entry is `vikunja-sync` (`heiss/obsidian-vikunja-plugin`),
@@ -61,10 +66,12 @@ An empty result means the id is still free.
 
 ### Release
 
-- [ ] A GitHub **Release** exists whose **tag equals `manifest.json`'s version
+- [x] A GitHub **Release** exists whose **tag equals `manifest.json`'s version
       with no `v` prefix** (e.g. `0.1.0`). See [`RELEASING.md`](../RELEASING.md).
-- [ ] The release has `main.js`, `manifest.json`, and `styles.css` attached as
+      Verified 2026-08-02: release `0.1.0`, not a draft, not a pre-release.
+- [x] The release has `main.js`, `manifest.json`, and `styles.css` attached as
       **individual** assets (the Release workflow does this automatically).
+      Verified 2026-08-02: all three present on the `0.1.0` release.
 - [x] `main.js` is **not** committed to the repo (built in CI).
 
 ### Developer policies
