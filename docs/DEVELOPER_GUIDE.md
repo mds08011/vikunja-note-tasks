@@ -45,11 +45,29 @@ Given a line, the Vikunja task title is the line **minus**:
 1. checkbox / list syntax (`- [ ] `, `* `, indentation),
 2. any existing `[vk](url)` link,
 3. any `<!--vk:id-->` marker,
-4. any trailing `→ [[Wikilink]]` (or `-> [[Wikilink]]`) artifacts pointer.
+4. any trailing `→ [[Wikilink]]` (or `-> [[Wikilink]]`) artifacts pointer,
+5. any **trailing run of `#tags`** (those become labels instead).
 
 All other text is kept verbatim; only whitespace left behind by the removals is
-collapsed to single spaces and trimmed. Mid-line brackets, `#`, numbers, and
+collapsed to single spaces and trimmed. Mid-line brackets, numbers, and
 punctuation are preserved (they are part of the title).
+
+## Tag and label invariants (`extractTags`)
+
+- A tag must start the line or follow whitespace, and its body must contain at
+  least one non-digit. That is what keeps `# Heading` (space after the hash),
+  a URL fragment (`…/page#section`, no preceding space), and a bare job or RFI
+  number (`#1204`, `#14`) from becoming labels. Nested tags (`#site/north`) pass
+  through whole.
+- **Tags anywhere on the line become labels; only *trailing* tags leave the
+  title.** A tag used mid-sentence ("Ask #urgent about the pump") is prose, and
+  deleting it would mangle the title.
+- Label names are assembled per line as settings defaults → note
+  `vikunja-labels` → line tags, then de-duplicated case-insensitively, so the
+  earliest source decides the spelling that gets created.
+- `LabelResolver` in `commands.ts` fetches the remote label list at most **once
+  per command** and caches labels it creates. Per-line tags therefore do not
+  turn a batch push into one `listLabels` call per line.
 
 ## Line-rewrite invariants (`rewriteLineWithTask`)
 

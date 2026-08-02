@@ -62,7 +62,9 @@ guidelines) — assign your own if you like.
 The two creating commands pick their destination project from the note's
 `vikunja-project` frontmatter, then your folder rules, then the default project —
 see [capture routing](USER_GUIDE.md#capture-routing). Each success Notice names
-the project it used and why.
+the project it used and why. Labels come from your default labels, the note's
+`vikunja-labels`, and any `#tags` on the captured line — see
+[labels](USER_GUIDE.md#labels).
 
 ## Settings
 
@@ -72,7 +74,7 @@ the project it used and why.
 | API token | A Vikunja API token. **Stored unencrypted** in the vault's plugin data — use a least-privilege token. |
 | Default project | Where new tasks are created when nothing more specific applies (fill the dropdown with **Test connection**). |
 | Folder rules | `pattern = project ID` per line, routing captures by the note's folder. See [capture routing](USER_GUIDE.md#capture-routing). |
-| Default labels | Comma-separated labels applied to every created task. |
+| Default labels | Comma-separated labels applied to every created task, on top of note and line labels. |
 | Include undated tasks | Whether "Insert today's tasks" also lists tasks with no due date. |
 | Open in browser after create | Open each newly created task in the browser. |
 

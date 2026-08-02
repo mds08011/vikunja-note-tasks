@@ -172,9 +172,8 @@ vikunja-labels:               # merged with the settings' default labels
 - **`vikunja-project-name`** — a human label, kept in a *separate* key because
   Obsidian's Properties editor strips YAML comments, so you can't annotate the ID
   inline. Informational only; the plugin never routes on the name.
-- **`vikunja-labels`** — a list, merged with the default labels from settings.
-  **Not yet read** — label merging is still to come in 0.2; today every created
-  task gets the settings' default labels only.
+- **`vikunja-labels`** — a list, merged with the default labels from settings and
+  with the line's own tags. **Active** — see [labels](#labels) below.
 
 ## Capture routing
 
@@ -229,6 +228,44 @@ Clients/Acme/** = 12
 
 A note at the vault root has no folder name, so folder rules never match it; it
 routes by frontmatter or falls through to the default project.
+
+## Labels
+
+Every created task gets labels from three sources, merged in this order:
+
+1. **Default labels** from settings (e.g. `inbox, from-obsidian`).
+2. **`vikunja-labels`** in the note's frontmatter — applies to every capture in
+   that note.
+3. **`#tags` on the captured line itself.**
+
+Duplicates are removed ignoring case, and the first spelling wins — so if
+settings say `Website` and the line says `#website`, you get one label, spelled
+`Website`. Labels that don't exist in Vikunja yet are created for you.
+
+```md
+- [ ] Order rebar for the footings #site #urgent
+```
+
+becomes a task titled **"Order rebar for the footings"** with the labels `site`
+and `urgent` (plus any note or default labels).
+
+### Which tags leave the title
+
+- **Tags at the end of the line are removed from the title** — they read as
+  metadata, and you don't want them repeated in the task name.
+- **A tag used mid-sentence stays put.** "Ask #urgent about the pump" is a
+  sentence; the task keeps that title *and* gets the `urgent` label.
+- A line that is *only* a tag keeps it as the title — otherwise there'd be
+  nothing left to name the task.
+
+### What is not treated as a tag
+
+- **Headings** (`# Heading`) — a space follows the hash.
+- **URL fragments** (`https://x.test/page#section`) — no whitespace before it.
+- **Bare numbers** (`#1204`, `#14`) — a tag needs at least one non-digit, so job
+  numbers and RFI references stay in the title where they belong.
+
+Nested tags work: `#site/north` becomes the label `site/north`.
 
 ## Mobile
 

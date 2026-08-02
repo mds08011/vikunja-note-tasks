@@ -26,6 +26,23 @@ const VK_LINK_RE = /\[vk\]\([^)]*\)/g;
 const TRAILING_POINTER_RE = /\s*(?:→|->)\s*\[\[[^\]]*\]\]\s*$/;
 
 /**
+ * An Obsidian inline tag, used to derive Vikunja labels.
+ *
+ * The body must contain at least one non-digit, which is what keeps a bare job
+ * number (`#1204`) or an issue reference from becoming a label. The tag must
+ * also start the line or follow whitespace, so a URL fragment (`…/page#frag`)
+ * and a Markdown heading (`# Heading` — a space follows the hash) never match.
+ */
+const TAG_BODY = "[A-Za-z0-9_\\-/]*[A-Za-z_\\-/][A-Za-z0-9_\\-/]*";
+const TAG_RE_GLOBAL = new RegExp(`(?:^|\\s)#(${TAG_BODY})`, "g");
+
+/**
+ * A run of tags at the very end of a line. Only these are stripped from the
+ * title — a tag used mid-sentence is part of the sentence.
+ */
+const TRAILING_TAGS_RE = new RegExp(`(?:\\s+#${TAG_BODY})+\\s*$`);
+
+/**
  * A Markdown checkbox list item. Captures, in order:
  *   1: everything up to and including the opening "["  (indent + bullet + "[")
  *   2: the single state character (" ", "x", or "X")
@@ -81,9 +98,10 @@ export function setCheckboxState(line: string, done: boolean): string {
 
 /**
  * Extracts the Vikunja task title from a line: strips checkbox syntax, any
- * existing `[vk](url)` link and marker, and any trailing "→ [[Wikilink]]"
- * pointer. All other text is kept verbatim; only whitespace left behind by the
- * removals is collapsed.
+ * existing `[vk](url)` link and marker, any trailing "→ [[Wikilink]]" pointer,
+ * and any trailing run of `#tags` (those become labels instead). All other text
+ * is kept verbatim — including a mid-sentence tag, which reads as prose — and
+ * only whitespace left behind by the removals is collapsed.
  */
 export function extractTitle(line: string): string {
 	let s: string;
@@ -97,7 +115,26 @@ export function extractTitle(line: string): string {
 	s = s.replace(TRAILING_POINTER_RE, "");
 	s = s.replace(VK_LINK_RE, " ");
 	s = s.replace(MARKER_RE_GLOBAL, " ");
-	return s.replace(/\s+/g, " ").trim();
+	s = s.replace(/\s+/g, " ").trim();
+	// Strip trailing tags last, once the pointer and marker are out of the way.
+	// A line that is *only* a tag keeps it: stripping would leave no title.
+	return s.replace(TRAILING_TAGS_RE, "").trim();
+}
+
+/**
+ * Collects the Obsidian tags on a line, in order, without their leading `#`.
+ * Tags anywhere on the line become labels; see `extractTitle` for which ones are
+ * also removed from the title text.
+ */
+export function extractTags(line: string): string[] {
+	const body = line.replace(VK_LINK_RE, " ").replace(MARKER_RE_GLOBAL, " ");
+	const re = new RegExp(TAG_RE_GLOBAL.source, "g");
+	const out: string[] = [];
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(body)) !== null) {
+		out.push(m[1]);
+	}
+	return out;
 }
 
 /**

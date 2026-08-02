@@ -7,6 +7,7 @@ import {
 	getCheckboxState,
 	setCheckboxState,
 	extractTitle,
+	extractTags,
 	rewriteLineWithTask,
 	findTodayBlock,
 	replaceTodayBlock,
@@ -160,4 +161,66 @@ test("replaceTodayBlock swaps the block in place, or returns null", () => {
 	const next = replaceTodayBlock(content, `${TODAY_BLOCK_BEGIN}\nnew\n${TODAY_BLOCK_END}`);
 	assert.equal(next, `a\n${TODAY_BLOCK_BEGIN}\nnew\n${TODAY_BLOCK_END}\nb`);
 	assert.equal(replaceTodayBlock("no block", "x"), null);
+});
+
+test("extractTags collects tags anywhere on the line", () => {
+	assert.deepEqual(extractTags("- [ ] Order rebar #site #urgent"), [
+		"site",
+		"urgent",
+	]);
+	assert.deepEqual(extractTags("- [ ] Ask #urgent about the pump"), ["urgent"]);
+	assert.deepEqual(extractTags("- [ ] no tags here"), []);
+	assert.deepEqual(extractTags("#lonely"), ["lonely"]);
+});
+
+test("extractTags supports nested tags and ignores digit-only ones", () => {
+	assert.deepEqual(extractTags("- [ ] Survey #site/north"), ["site/north"]);
+	// A bare job or RFI number must not become a label.
+	assert.deepEqual(extractTags("- [ ] Review RFI #14 (structural)"), []);
+	assert.deepEqual(extractTags("- [ ] Job #1204 kickoff #urgent"), ["urgent"]);
+});
+
+test("extractTags ignores hashes that are not Obsidian tags", () => {
+	// A heading's hash is followed by a space.
+	assert.deepEqual(extractTags("# Heading"), []);
+	// A URL fragment is not preceded by whitespace.
+	assert.deepEqual(extractTags("- [ ] See https://x.test/page#section"), []);
+	// The task's own link and marker are never mined for tags.
+	assert.deepEqual(
+		extractTags("- [ ] Done [vk](https://h/tasks/12#tab) <!--vk:12-->"),
+		[],
+	);
+});
+
+test("extractTitle strips trailing tags but keeps mid-sentence ones", () => {
+	assert.equal(extractTitle("- [ ] Order rebar #site #urgent"), "Order rebar");
+	assert.equal(
+		extractTitle("- [ ] Ask #urgent about the pump"),
+		"Ask #urgent about the pump",
+	);
+	assert.equal(
+		extractTitle("- [ ] Ask #urgent about the pump #site"),
+		"Ask #urgent about the pump",
+	);
+	// Digit-only hashes are not tags, so they stay in the title.
+	assert.equal(
+		extractTitle("- [ ] Review RFI #14"),
+		"Review RFI #14",
+	);
+});
+
+test("extractTitle keeps a lone tag rather than emptying the title", () => {
+	assert.equal(extractTitle("- [ ] #urgent"), "#urgent");
+	assert.equal(extractTitle("#urgent"), "#urgent");
+});
+
+test("extractTitle strips trailing tags alongside the other artifacts", () => {
+	assert.equal(
+		extractTitle("- [ ] Pour footing #site → [[Footing pour details]]"),
+		"Pour footing",
+	);
+	assert.equal(
+		extractTitle("- [ ] Order rebar #site [vk](https://h/tasks/12) <!--vk:12-->"),
+		"Order rebar",
+	);
 });

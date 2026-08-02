@@ -21,6 +21,10 @@ GitHub release notes are assembled from this file.
   full folder path.
 - `src/routing.ts`, a new Obsidian-free module holding the glob matching and
   resolution order, with unit tests.
+- **Labels from the note and the line.** `vikunja-labels` frontmatter (a YAML
+  list or a comma-separated string) applies to every capture in a note, and
+  `#tags` on a captured line become labels on that task. Merge order is settings
+  defaults → note labels → line tags, de-duplicated ignoring case.
 
 ### Changed
 
@@ -28,6 +32,10 @@ GitHub release notes are assembled from this file.
   the command with an explanatory notice and creates nothing, instead of being
   ignored. An absent or empty key still falls through to folder rules and the
   default project.
+- A **trailing** run of `#tags` is stripped from the task title, since those tags
+  now become labels. Tags used mid-sentence stay in the title, and `#` followed
+  by digits only (`#1204`, `#14`) is never treated as a tag, so job and RFI
+  numbers are untouched.
 
 ## [0.1.0] - 2026-07-24
 

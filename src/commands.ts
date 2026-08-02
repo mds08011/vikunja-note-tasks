@@ -3,6 +3,7 @@ import type { TFile } from "obsidian";
 import type VikunjaNoteTasksPlugin from "./main";
 import { VikunjaClient, VikunjaApiError, describeVikunjaError } from "./api";
 import {
+	extractTags,
 	extractTitle,
 	findTodayBlock,
 	getCheckboxState,
@@ -18,11 +19,19 @@ import {
 	parseFolderMappings,
 	resolveProject,
 } from "./routing";
-import { parseCsvList, dedupeCaseInsensitive, summarize } from "./util";
+import {
+	parseCsvList,
+	dedupeCaseInsensitive,
+	parseFrontmatterLabels,
+	summarize,
+} from "./util";
 import type { VikunjaTask } from "./types";
 
 /** The frontmatter key that routes a note's captures. */
 const PROJECT_KEY = "vikunja-project";
+
+/** The frontmatter key holding labels applied to every capture in the note. */
+const LABELS_KEY = "vikunja-labels";
 
 /** Replaces exactly one line, leaving every other character in the note intact. */
 function replaceLine(editor: Editor, lineIndex: number, text: string): void {
@@ -31,37 +40,60 @@ function replaceLine(editor: Editor, lineIndex: number, text: string): void {
 	editor.replaceRange(text, from, to);
 }
 
-/** Resolves label names to ids, creating any that don't exist yet. */
-async function resolveLabelIds(
-	client: VikunjaClient,
-	names: string[],
-): Promise<number[]> {
-	if (names.length === 0) return [];
-	const existing = await client.listLabels();
-	const byLower = new Map(existing.map((l) => [l.title.toLowerCase(), l]));
-	const ids: number[] = [];
-	for (const name of names) {
-		const found = byLower.get(name.toLowerCase());
-		if (found) {
-			ids.push(found.id);
-		} else {
-			const created = await client.createLabel(name);
-			byLower.set(name.toLowerCase(), created);
-			ids.push(created.id);
+/**
+ * Resolves label names to ids, creating any that don't exist yet.
+ *
+ * Labels now vary per line (a line's `#tags` become labels), so the remote label
+ * list is fetched at most once per command and every created label is cached —
+ * a batch push of 30 lines still costs one `listLabels` call.
+ */
+class LabelResolver {
+	private byLower: Map<string, number> | null = null;
+
+	constructor(private readonly client: VikunjaClient) {}
+
+	async idsFor(names: string[]): Promise<number[]> {
+		const wanted = dedupeCaseInsensitive(names);
+		if (wanted.length === 0) return [];
+
+		if (this.byLower === null) {
+			const existing = await this.client.listLabels();
+			this.byLower = new Map(
+				existing.map((l) => [l.title.toLowerCase(), l.id]),
+			);
 		}
+
+		const ids: number[] = [];
+		for (const name of wanted) {
+			const key = name.toLowerCase();
+			const found = this.byLower.get(key);
+			if (found !== undefined) {
+				ids.push(found);
+			} else {
+				const created = await this.client.createLabel(name);
+				this.byLower.set(key, created.id);
+				ids.push(created.id);
+			}
+		}
+		return ids;
 	}
-	return ids;
 }
 
-/** Resolves the configured default labels to ids once, creating any missing. */
-async function ensureDefaultLabelIds(
+/**
+ * The label names for one captured line: the settings' defaults, then the note's
+ * `vikunja-labels` frontmatter, then the line's own `#tags`. Order decides which
+ * spelling wins when two sources differ only by case.
+ */
+function labelNamesFor(
 	plugin: VikunjaNoteTasksPlugin,
-	client: VikunjaClient,
-): Promise<number[]> {
-	const names = dedupeCaseInsensitive(
-		parseCsvList(plugin.settings.defaultLabels),
-	);
-	return resolveLabelIds(client, names);
+	noteLabels: string[],
+	lineText: string,
+): string[] {
+	return dedupeCaseInsensitive([
+		...parseCsvList(plugin.settings.defaultLabels),
+		...noteLabels,
+		...extractTags(lineText),
+	]);
 }
 
 /** Creates one task in the given project and attaches the given labels. */
@@ -91,18 +123,27 @@ function projectLabel(plugin: VikunjaNoteTasksPlugin, id: number): string {
 	return found ? `${found.title} (#${id})` : `project #${id}`;
 }
 
+/** Everything a note's frontmatter and location contribute to a capture. */
+interface NoteContext {
+	route: Route;
+	/** Names from `vikunja-labels`, applied to every capture in the note. */
+	noteLabels: string[];
+}
+
 /**
- * Resolves which project this note's captures go to: frontmatter, then the
- * first matching folder rule, then the default project. Throws a `config` error
- * — before anything is created — when the note is unroutable.
+ * Reads the note's frontmatter once and derives both the destination project
+ * (frontmatter, then the first matching folder rule, then the default) and the
+ * note-level labels. Throws a `config` error — before anything is created —
+ * when the note is unroutable.
  */
-function routeProjectForNote(
+function contextForNote(
 	plugin: VikunjaNoteTasksPlugin,
 	file: TFile | null,
-): Route {
+): NoteContext {
 	const frontmatter = file
 		? plugin.app.metadataCache.getFileCache(file)?.frontmatter
 		: undefined;
+	const noteLabels = parseFrontmatterLabels(frontmatter?.[LABELS_KEY]);
 	const { mappings } = parseFolderMappings(plugin.settings.folderMappings);
 
 	const outcome = resolveProject({
@@ -134,7 +175,10 @@ function routeProjectForNote(
 			: outcome.source === "folder"
 				? `${name} via folder rule "${outcome.pattern}"`
 				: `${name} (default project)`;
-	return { projectId: outcome.projectId, description };
+	return {
+		route: { projectId: outcome.projectId, description },
+		noteLabels,
+	};
 }
 
 /**
@@ -142,7 +186,8 @@ function routeProjectForNote(
  * selection (or the current line), then rewrites that line in place with a link
  * and marker. Refuses to act on a line that already has a marker. The
  * destination project is resolved from `file` (frontmatter, then folder rules,
- * then the default).
+ * then the default), and labels come from settings, frontmatter, and the line's
+ * own `#tags`.
  */
 export async function createFromSelectionOrLine(
 	plugin: VikunjaNoteTasksPlugin,
@@ -152,7 +197,7 @@ export async function createFromSelectionOrLine(
 	try {
 		const client = plugin.getClient();
 		client.ensureConfigured();
-		const route = routeProjectForNote(plugin, file);
+		const { route, noteLabels } = contextForNote(plugin, file);
 
 		const lineIndex = editor.getCursor("from").line;
 		const lineText = editor.getLine(lineIndex);
@@ -171,7 +216,10 @@ export async function createFromSelectionOrLine(
 			return;
 		}
 
-		const labelIds = await ensureDefaultLabelIds(plugin, client);
+		// Tags come from the same text the title did, so a selection's tags apply.
+		const labelIds = await new LabelResolver(client).idsFor(
+			labelNamesFor(plugin, noteLabels, titleSource),
+		);
 		const task = await createOneTask(
 			client,
 			route.projectId,
@@ -202,11 +250,12 @@ export async function pushAllOpenTasks(
 ): Promise<void> {
 	const client = plugin.getClient();
 	let route: Route;
+	let noteLabels: string[];
 	try {
 		client.ensureConfigured();
 		// Resolved once per note, before any task is created: every line in a
 		// note shares one destination.
-		route = routeProjectForNote(plugin, file);
+		({ route, noteLabels } = contextForNote(plugin, file));
 	} catch (err) {
 		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
 		return;
@@ -231,7 +280,9 @@ export async function pushAllOpenTasks(
 
 	let created = 0;
 	try {
-		const labelIds = await ensureDefaultLabelIds(plugin, client);
+		// One resolver for the whole batch: the label list is fetched at most
+		// once no matter how many distinct tags the note's lines carry.
+		const labels = new LabelResolver(client);
 		for (const i of targets) {
 			const lineText = editor.getLine(i);
 			// Re-check in case the note changed since scanning.
@@ -244,6 +295,9 @@ export async function pushAllOpenTasks(
 				skipped++;
 				continue;
 			}
+			const labelIds = await labels.idsFor(
+				labelNamesFor(plugin, noteLabels, lineText),
+			);
 			const task = await createOneTask(
 				client,
 				route.projectId,
