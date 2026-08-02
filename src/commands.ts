@@ -5,6 +5,7 @@ import type { CachedProject } from "./main";
 import { VikunjaClient, VikunjaApiError, describeVikunjaError } from "./api";
 import { pickProject } from "./pickers";
 import {
+	extractDueDate,
 	extractTags,
 	extractTitle,
 	findTodayBlock,
@@ -24,6 +25,7 @@ import {
 import {
 	parseCsvList,
 	dedupeCaseInsensitive,
+	dueDateToRfc3339,
 	parseFrontmatterLabels,
 	summarize,
 } from "./util";
@@ -98,14 +100,34 @@ function labelNamesFor(
 	]);
 }
 
+/** Local midnight on `ymd` as RFC3339, honouring DST on that specific date. */
+function dueDateIsoFor(ymd: string): string {
+	const [year, month, day] = ymd.split("-").map((n) => parseInt(n, 10));
+	// Constructing the date itself (not "now") is what gets DST right for a due
+	// date on the other side of a clock change.
+	const offset = new Date(year, month - 1, day).getTimezoneOffset();
+	return dueDateToRfc3339(ymd, offset);
+}
+
+/** The due date a line asks for, when emoji-date parsing is enabled. */
+function dueDateFrom(
+	plugin: VikunjaNoteTasksPlugin,
+	text: string,
+): string | undefined {
+	if (!plugin.settings.parseEmojiDates) return undefined;
+	const ymd = extractDueDate(text);
+	return ymd ? dueDateIsoFor(ymd) : undefined;
+}
+
 /** Creates one task in the given project and attaches the given labels. */
 async function createOneTask(
 	client: VikunjaClient,
 	projectId: number,
 	title: string,
 	labelIds: number[],
+	dueDate?: string,
 ): Promise<VikunjaTask> {
-	const task = await client.createTask(projectId, { title });
+	const task = await client.createTask(projectId, { title, due_date: dueDate });
 	for (const id of labelIds) {
 		await client.addLabelToTask(task.id, id);
 	}
@@ -235,6 +257,7 @@ interface CaptureTarget {
  * opening a modal.
  */
 function resolveCaptureTarget(
+	plugin: VikunjaNoteTasksPlugin,
 	editor: Editor,
 ): { ok: true; target: CaptureTarget } | { ok: false; message: string } {
 	const lineIndex = editor.getCursor("from").line;
@@ -247,7 +270,7 @@ function resolveCaptureTarget(
 	const selection = editor.getSelection();
 	const titleSource =
 		selection && selection.trim().length > 0 ? selection : lineText;
-	const title = extractTitle(titleSource);
+	const title = extractTitle(titleSource, plugin.settings.parseEmojiDates);
 	if (!title) {
 		return { ok: false, message: "nothing to create — no task text found." };
 	}
@@ -276,6 +299,7 @@ async function captureTarget(
 		route.projectId,
 		target.title,
 		labelIds,
+		dueDateFrom(plugin, target.titleSource),
 	);
 	const url = taskWebUrl(plugin.settings.baseUrl, task.id);
 	replaceLine(
@@ -308,7 +332,7 @@ export async function createFromSelectionOrLine(
 		client.ensureConfigured();
 		const { route, noteLabels } = contextForNote(plugin, file);
 
-		const resolved = resolveCaptureTarget(editor);
+		const resolved = resolveCaptureTarget(plugin, editor);
 		if (!resolved.ok) {
 			new Notice(`Vikunja: ${resolved.message}`);
 			return;
@@ -344,7 +368,7 @@ export async function createInPickedProject(
 		const client = plugin.getClient();
 		client.ensureConfigured();
 
-		const resolved = resolveCaptureTarget(editor);
+		const resolved = resolveCaptureTarget(plugin, editor);
 		if (!resolved.ok) {
 			new Notice(`Vikunja: ${resolved.message}`);
 			return;
@@ -426,7 +450,7 @@ export async function pushAllOpenTasks(
 				skipped++;
 				continue;
 			}
-			const title = extractTitle(lineText);
+			const title = extractTitle(lineText, plugin.settings.parseEmojiDates);
 			if (!title) {
 				skipped++;
 				continue;
@@ -439,6 +463,7 @@ export async function pushAllOpenTasks(
 				route.projectId,
 				title,
 				labelIds,
+				dueDateFrom(plugin, lineText),
 			);
 			const url = taskWebUrl(plugin.settings.baseUrl, task.id);
 			replaceLine(editor, i, rewriteLineWithTask(lineText, task.id, url));

@@ -76,6 +76,7 @@ the project it used and why. Labels come from your default labels, the note's
 | Default project | Where new tasks are created when nothing more specific applies (fill the dropdown with **Test connection**). |
 | Folder rules | `pattern = project ID` per line, routing captures by the note's folder. See [capture routing](USER_GUIDE.md#capture-routing). |
 | Default labels | Comma-separated labels applied to every created task, on top of note and line labels. |
+| Parse Tasks-plugin emoji dates | Read a `📅 YYYY-MM-DD` due date off the captured line and keep emoji date fields out of the title. On by default. |
 | Include undated tasks | Whether "Insert today's tasks" also lists tasks with no due date. |
 | Open in browser after create | Open each newly created task in the browser. |
 

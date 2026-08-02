@@ -36,6 +36,11 @@ export interface VikunjaNoteTasksSettings {
 	defaultLabels: string;
 	includeUndated: boolean;
 	openInBrowserAfterCreate: boolean;
+	/**
+	 * Read a Tasks-plugin `📅 YYYY-MM-DD` due date off a captured line, and keep
+	 * emoji date fields out of the task title.
+	 */
+	parseEmojiDates: boolean;
 	/** Cache of projects for the settings dropdown; refreshed by Test connection. */
 	cachedProjects: CachedProject[];
 }
@@ -49,6 +54,7 @@ export const DEFAULT_SETTINGS: VikunjaNoteTasksSettings = {
 	defaultLabels: "",
 	includeUndated: false,
 	openInBrowserAfterCreate: false,
+	parseEmojiDates: true,
 	cachedProjects: [],
 };
 

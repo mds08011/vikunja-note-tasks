@@ -8,6 +8,7 @@ import {
 	setCheckboxState,
 	extractTitle,
 	extractTags,
+	extractDueDate,
 	rewriteLineWithTask,
 	findTodayBlock,
 	replaceTodayBlock,
@@ -222,5 +223,63 @@ test("extractTitle strips trailing tags alongside the other artifacts", () => {
 	assert.equal(
 		extractTitle("- [ ] Order rebar #site [vk](https://h/tasks/12) <!--vk:12-->"),
 		"Order rebar",
+	);
+});
+
+test("extractDueDate reads a Tasks-plugin due date", () => {
+	assert.equal(extractDueDate("- [ ] Order rebar 📅 2026-08-10"), "2026-08-10");
+	// The other two emoji Tasks accepts for a due date.
+	assert.equal(extractDueDate("- [ ] Order rebar 📆 2026-08-10"), "2026-08-10");
+	assert.equal(extractDueDate("- [ ] Order rebar 🗓 2026-08-10"), "2026-08-10");
+	// A variation selector after the emoji is common and must not break it.
+	assert.equal(extractDueDate("- [ ] Order rebar 🗓️ 2026-08-10"), "2026-08-10");
+	assert.equal(extractDueDate("- [ ] Order rebar 📅2026-08-10"), "2026-08-10");
+});
+
+test("extractDueDate ignores other date fields and missing dates", () => {
+	assert.equal(extractDueDate("- [ ] Order rebar"), null);
+	// Scheduled/start dates are not due dates.
+	assert.equal(extractDueDate("- [ ] Order rebar ⏳ 2026-08-10"), null);
+	assert.equal(extractDueDate("- [ ] Order rebar 🛫 2026-08-10"), null);
+	// A plain date with no emoji is title text, not a due date.
+	assert.equal(extractDueDate("- [ ] Ship drawings by 2026-08-10"), null);
+});
+
+test("extractDueDate rejects impossible dates rather than guessing", () => {
+	assert.equal(extractDueDate("- [ ] x 📅 2026-02-30"), null);
+	assert.equal(extractDueDate("- [ ] x 📅 2026-13-01"), null);
+	assert.equal(extractDueDate("- [ ] x 📅 2026-00-10"), null);
+	assert.equal(extractDueDate("- [ ] x 📅 2026-02-29"), null); // not a leap year
+	assert.equal(extractDueDate("- [ ] x 📅 2028-02-29"), "2028-02-29"); // leap year
+});
+
+test("extractTitle strips emoji date fields it reads and ones it doesn't", () => {
+	assert.equal(extractTitle("- [ ] Order rebar 📅 2026-08-10"), "Order rebar");
+	assert.equal(extractTitle("- [ ] Order rebar ⏳ 2026-08-01"), "Order rebar");
+	assert.equal(
+		extractTitle("- [ ] Order rebar 🛫 2026-08-01 📅 2026-08-10"),
+		"Order rebar",
+	);
+	// Either ordering of tags and dates leaves a clean title.
+	assert.equal(
+		extractTitle("- [ ] Order rebar #site 📅 2026-08-10"),
+		"Order rebar",
+	);
+	assert.equal(
+		extractTitle("- [ ] Order rebar 📅 2026-08-10 #site"),
+		"Order rebar",
+	);
+});
+
+test("extractTitle keeps emoji dates when parsing is disabled", () => {
+	assert.equal(
+		extractTitle("- [ ] Order rebar 📅 2026-08-10", false),
+		"Order rebar 📅 2026-08-10",
+	);
+	// An unparseable date stays in the title even when parsing is on, so the
+	// user can see and fix it.
+	assert.equal(
+		extractTitle("- [ ] Order rebar 📅 not-a-date"),
+		"Order rebar 📅 not-a-date",
 	);
 });

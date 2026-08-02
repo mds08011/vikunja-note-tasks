@@ -25,6 +25,11 @@ GitHub release notes are assembled from this file.
   projects chooses where this one task goes, overriding frontmatter and folder
   rules without changing the note. Cancelling creates nothing; an empty project
   list is fetched on demand rather than sending you to settings.
+- **Tasks-plugin emoji due dates.** A `📅 YYYY-MM-DD` on a captured line becomes
+  the task's due date, anchored to local midnight so the day never shifts. Emoji
+  date fields (`📅 📆 🗓 ⏳ ⌛ 🛫 ➕ ✅ ❌`) are kept out of the task title, whether
+  or not the plugin reads them. New setting **Parse Tasks-plugin emoji dates**
+  (on by default) turns the whole behaviour off.
 - **Labels from the note and the line.** `vikunja-labels` frontmatter (a YAML
   list or a comma-separated string) applies to every capture in a note, and
   `#tags` on a captured line become labels on that task. Merge order is settings

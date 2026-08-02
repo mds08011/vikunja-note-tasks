@@ -67,6 +67,11 @@ the endpoints live. See `docs/adr/0003-v2-first-api-strategy.md`.
 - **Unset dates** are encoded as the year-0001 zero time
   (`0001-01-01T00:00:00Z`), not null-in-JSON. `render.ts#hasRealDate` treats
   those as "no due date".
+- **Dates we send** are RFC3339 with an explicit local offset at midnight, e.g.
+  `2026-08-10T00:00:00-07:00` for a `📅 2026-08-10` capture. Vikunja stores UTC
+  and renders in the viewer's timezone, so sending a bare `…T00:00:00Z` would
+  show the task as due a day early for anyone west of UTC. `due_date` is omitted
+  entirely (not sent as null or as the zero time) when a line has no date.
 - **Undated tasks in the "today" filter:** whether tasks with no due date are
   returned by `due_date <= now/d+1d` depends on the instance's null-date
   handling. The plugin therefore also filters client-side using the

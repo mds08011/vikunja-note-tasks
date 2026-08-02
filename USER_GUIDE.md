@@ -53,6 +53,7 @@ Open **Settings → Community plugins → Vikunja Note Tasks**.
 | **Default project** | Click **Test connection** first to load the list, then pick one. Used when nothing more specific routes the note. |
 | **Folder rules** | Optional. One `pattern = project ID` per line, e.g. `1204 * = 7`. See [capture routing](#capture-routing). |
 | **Default labels** | Comma-separated, e.g. `inbox, from-obsidian`. Applied to every created task; missing labels are created for you. |
+| **Parse Tasks-plugin emoji dates** | On by default. Reads `📅 YYYY-MM-DD` as the due date; see [due dates](#due-dates). |
 | **Include undated tasks** | Whether "Insert today's tasks" also lists tasks with no due date. |
 | **Open in browser after create** | Open each newly created task automatically. |
 
@@ -285,6 +286,35 @@ and `urgent` (plus any note or default labels).
   numbers and RFI references stay in the title where they belong.
 
 Nested tags work: `#site/north` becomes the label `site/north`.
+
+## Due dates
+
+If you write due dates the way the [Tasks
+plugin](https://publish.obsidian.md/tasks/) does, the plugin reads them:
+
+```md
+- [ ] Order rebar for the footings 📅 2026-08-10
+```
+
+creates a task titled **"Order rebar for the footings"** due **2026-08-10**. All
+three of the emoji Tasks accepts for a due date work — `📅`, `📆`, `🗓`.
+
+- The due date is set to **local midnight** on that day, so "due the 10th" stays
+  the 10th no matter which side of UTC you're on.
+- **Other emoji date fields are removed from the title but not otherwise used:**
+  `⏳` scheduled, `🛫` start, `➕` created, `✅` done, `❌` cancelled. They're
+  metadata, so they don't belong in a Vikunja task name — but only the due date
+  has a Vikunja field to go into.
+- **Recurrence (`🔁`) is left completely alone**, in the title and everywhere
+  else. Its value is free text of unpredictable length, so there's no safe way to
+  cut it out without risking a bite out of your title.
+- **An impossible date is left alone** — `📅 2026-02-30` stays in the title and
+  sets no due date, so you can see the typo rather than get a silently
+  "corrected" date.
+- A plain date with no emoji (`by 2026-08-10`) is just title text.
+
+Turn off **Parse Tasks-plugin emoji dates** in settings to treat all of these as
+ordinary title text.
 
 ## Mobile
 

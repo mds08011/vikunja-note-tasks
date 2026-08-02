@@ -47,7 +47,13 @@ Given a line, the Vikunja task title is the line **minus**:
 2. any existing `[vk](url)` link,
 3. any `<!--vk:id-->` marker,
 4. any trailing `→ [[Wikilink]]` (or `-> [[Wikilink]]`) artifacts pointer,
-5. any **trailing run of `#tags`** (those become labels instead).
+5. any **Tasks-plugin emoji date field** (`📅 ⏳ 🛫 ➕ ✅ ❌` + `YYYY-MM-DD`), when
+   `stripEmojiDates` is on — the second parameter, wired to the
+   **Parse Tasks-plugin emoji dates** setting,
+6. any **trailing run of `#tags`** (those become labels instead).
+
+Emoji dates are stripped *before* tags so a line ending either way round
+(`text #tag 📅 2026-08-10` or `text 📅 2026-08-10 #tag`) yields a clean title.
 
 All other text is kept verbatim; only whitespace left behind by the removals is
 collapsed to single spaces and trimmed. Mid-line brackets, numbers, and
@@ -108,6 +114,22 @@ the module is Obsidian-free, and `api.ts` (which owns `VikunjaApiError`) imports
   crosses segments, a leading `**/` and a trailing `/**` are both optional
   matches. Case-insensitive. Unparseable rule lines are dropped from matching and
   reported to the settings UI by `parseFolderMappings`.
+
+## Due-date invariants (`extractDueDate`, `dueDateToRfc3339`)
+
+- **Only `📅 📆 🗓` set a due date.** The other emoji date fields are stripped
+  from the title but never read: Vikunja has no field for a "start" or
+  "scheduled" date, and inventing a mapping would lose information silently.
+- **`🔁` recurrence is never touched** — unbounded free-text value, so there is no
+  safe strip.
+- **An impossible date (`2026-02-30`) parses to null** and stays in the title.
+  `isRealYmd` does the leap-year arithmetic; we never coerce a bad date.
+- **Due dates are sent as local midnight with an explicit offset**
+  (`2026-08-10T00:00:00-07:00`), not `…Z`. A bare Z would land the task on the
+  previous day for every user west of UTC. `dueDateToRfc3339` takes the offset as
+  a parameter so it stays pure and testable; `dueDateIsoFor` in `commands.ts`
+  computes it from *that date* (`new Date(y, m-1, d)`), not from "now", so a due
+  date on the far side of a DST change gets the right offset.
 
 ## Done-state mapping
 

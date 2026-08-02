@@ -4,7 +4,7 @@ This roadmap is a plan, not a promise. It exists to make the plugin's scope — 
 especially its **permanent non-goals** — explicit. The guiding principle never
 changes: **every remote action is explicitly user-triggered.**
 
-## 0.1 — Capture, update, and view (current)
+## 0.1 — Capture, update, and view (released)
 
 - Create a Vikunja task from the selection or current line, rewriting the line
   in place with a visible link and an HTML-comment marker.
@@ -16,7 +16,10 @@ changes: **every remote action is explicitly user-triggered.**
 - Settings tab with connection test; documented `vikunja-*` frontmatter contract
   (routing ships in 0.2).
 
-## 0.2 — Capture routing and enrichment
+## 0.2 — Capture routing and enrichment (built, unreleased)
+
+All five items below are implemented on `main`; see the Unreleased section of
+[`CHANGELOG.md`](CHANGELOG.md). They ship when 0.2.0 is tagged.
 
 - Frontmatter project routing per the documented contract:
   `vikunja-project` (authoritative numeric id) > folder-to-project mapping >

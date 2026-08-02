@@ -43,6 +43,41 @@ const TAG_RE_GLOBAL = new RegExp(`(?:^|\\s)#(${TAG_BODY})`, "g");
 const TRAILING_TAGS_RE = new RegExp(`(?:\\s+#${TAG_BODY})+\\s*$`);
 
 /**
+ * Tasks-plugin emoji date fields.
+ *
+ * `DUE_EMOJI` are the three the Tasks plugin accepts for a due date; the wider
+ * set covers its other dated fields (scheduled, start, created, done,
+ * cancelled). We *read* only the due date, but all of them are metadata rather
+ * than prose, so none belong in a Vikunja task title.
+ *
+ * Recurrence (🔁) is deliberately absent: its value is free text of unbounded
+ * length ("every week on Tuesday"), so there is no safe way to strip it without
+ * risking a bite out of the title.
+ */
+const DUE_EMOJI = "\\u{1F4C5}\\u{1F4C6}\\u{1F5D3}";
+const OTHER_DATE_EMOJI = "\\u{23F3}\\u{231B}\\u{1F6EB}\\u{2795}\\u{2705}\\u{274C}";
+/** Optional variation selector that many fonts/keyboards append. */
+const VS16 = "\\u{FE0F}?";
+
+const DUE_DATE_RE = new RegExp(
+	`[${DUE_EMOJI}]${VS16}\\s*(\\d{4})-(\\d{2})-(\\d{2})`,
+	"u",
+);
+const DATE_FIELD_RE = new RegExp(
+	`\\s*[${DUE_EMOJI}${OTHER_DATE_EMOJI}]${VS16}\\s*\\d{4}-\\d{2}-\\d{2}`,
+	"gu",
+);
+
+/** True for a calendar date that actually exists (leap years included). */
+function isRealYmd(year: number, month: number, day: number): boolean {
+	if (month < 1 || month > 12 || day < 1) return false;
+	const lengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+	const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+	const max = month === 2 && leap ? 29 : lengths[month - 1];
+	return day <= max;
+}
+
+/**
  * A Markdown checkbox list item. Captures, in order:
  *   1: everything up to and including the opening "["  (indent + bullet + "[")
  *   2: the single state character (" ", "x", or "X")
@@ -103,7 +138,7 @@ export function setCheckboxState(line: string, done: boolean): string {
  * is kept verbatim — including a mid-sentence tag, which reads as prose — and
  * only whitespace left behind by the removals is collapsed.
  */
-export function extractTitle(line: string): string {
+export function extractTitle(line: string, stripEmojiDates = true): string {
 	let s: string;
 	const cb = CHECKBOX_RE.exec(line);
 	if (cb) {
@@ -115,10 +150,31 @@ export function extractTitle(line: string): string {
 	s = s.replace(TRAILING_POINTER_RE, "");
 	s = s.replace(VK_LINK_RE, " ");
 	s = s.replace(MARKER_RE_GLOBAL, " ");
+	// Emoji date fields go before tags, so either ordering of the two on a line
+	// ("text #tag 📅 2026-08-10" or "text 📅 2026-08-10 #tag") leaves a clean title.
+	if (stripEmojiDates) s = s.replace(DATE_FIELD_RE, " ");
 	s = s.replace(/\s+/g, " ").trim();
 	// Strip trailing tags last, once the pointer and marker are out of the way.
 	// A line that is *only* a tag keeps it: stripping would leave no title.
 	return s.replace(TRAILING_TAGS_RE, "").trim();
+}
+
+/**
+ * Reads a Tasks-plugin due date (`📅 2026-08-10`) from a line, as `YYYY-MM-DD`,
+ * or null when there isn't a usable one.
+ *
+ * A syntactically well-formed but impossible date (`2026-02-30`) returns null
+ * and is left in the title rather than being silently corrected or sent on to
+ * Vikunja — the user can see the text and fix it.
+ */
+export function extractDueDate(line: string): string | null {
+	const m = DUE_DATE_RE.exec(line);
+	if (!m) return null;
+	const [, year, month, day] = m;
+	if (!isRealYmd(parseInt(year, 10), parseInt(month, 10), parseInt(day, 10))) {
+		return null;
+	}
+	return `${year}-${month}-${day}`;
 }
 
 /**

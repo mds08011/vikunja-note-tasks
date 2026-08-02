@@ -42,6 +42,25 @@ export function parseFrontmatterLabels(value: unknown): string[] {
 	return [];
 }
 
+/**
+ * Turns a `YYYY-MM-DD` date into the RFC3339 timestamp Vikunja stores, anchored
+ * to **local midnight** on that date.
+ *
+ * The offset is passed in (as `Date#getTimezoneOffset` reports it: minutes
+ * *behind* UTC, so UTC-7 is +420) rather than read here, which keeps this
+ * function pure and testable. Sending a bare `T00:00:00Z` instead would land the
+ * task on the previous day for anyone west of UTC — the whole point of carrying
+ * the offset is that "due the 10th" stays the 10th.
+ */
+export function dueDateToRfc3339(ymd: string, offsetMinutes: number): string {
+	if (offsetMinutes === 0) return `${ymd}T00:00:00Z`;
+	const sign = offsetMinutes > 0 ? "-" : "+";
+	const total = Math.abs(offsetMinutes);
+	const hours = String(Math.floor(total / 60)).padStart(2, "0");
+	const minutes = String(total % 60).padStart(2, "0");
+	return `${ymd}T00:00:00${sign}${hours}:${minutes}`;
+}
+
 /** Summarises a batch outcome, e.g. "Created 3, skipped 1." */
 export function summarize(created: number, skipped: number): string {
 	const c = `Created ${created}`;

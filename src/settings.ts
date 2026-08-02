@@ -178,6 +178,22 @@ export class VikunjaSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Parse Tasks-plugin emoji dates")
+			.setDesc(
+				"Read a 📅 YYYY-MM-DD due date off the captured line, and keep emoji " +
+					"date fields (📅 ⏳ 🛫 ➕ ✅) out of the task title. Turn this off to " +
+					"treat them as ordinary title text.",
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.parseEmojiDates)
+					.onChange(async (value) => {
+						this.plugin.settings.parseEmojiDates = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
 			.setName("Open in browser after create")
 			.setDesc("Open each newly created task in your browser.")
 			.addToggle((toggle) =>
