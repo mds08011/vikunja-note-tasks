@@ -8,6 +8,27 @@ GitHub release notes are assembled from this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Capture routing.** The two creating commands now resolve a destination
+  project per note: `vikunja-project` frontmatter first, then the first matching
+  folder rule, then the default project. Success notices name the project and the
+  step that chose it.
+- Setting: **Folder rules** — one `pattern = project ID` per line, with a live
+  preview that resolves IDs to project names and lists any line it could not
+  parse. Patterns without `/` match a folder *name* at any depth, so moving a
+  folder between parents doesn't break its routing; patterns with `/` match the
+  full folder path.
+- `src/routing.ts`, a new Obsidian-free module holding the glob matching and
+  resolution order, with unit tests.
+
+### Changed
+
+- A `vikunja-project` frontmatter value that isn't a numeric project ID now stops
+  the command with an explanatory notice and creates nothing, instead of being
+  ignored. An absent or empty key still falls through to folder rules and the
+  default project.
+
 ## [0.1.0] - 2026-07-24
 
 ### Added

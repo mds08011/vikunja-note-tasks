@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import type VikunjaNoteTasksPlugin from "./main";
 import { VikunjaClient, describeVikunjaError } from "./api";
+import { parseFolderMappings } from "./routing";
 
 /**
  * The plugin's settings tab: connection details, defaults, and a connection
@@ -12,6 +13,43 @@ export class VikunjaSettingTab extends PluginSettingTab {
 	constructor(app: App, plugin: VikunjaNoteTasksPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	/**
+	 * Shows how the folder rules parsed: each valid rule with the project it
+	 * resolves to (by cached name when known), and each unparseable line. Rules
+	 * that don't parse are skipped at capture time, so they must be visible here.
+	 */
+	private renderFolderRulePreview(target: HTMLElement): void {
+		target.empty();
+		const raw = this.plugin.settings.folderMappings;
+		if (!raw.trim()) return;
+
+		const { mappings, errors } = parseFolderMappings(raw);
+		const projectsById = new Map(
+			this.plugin.settings.cachedProjects.map((p) => [p.id, p.title]),
+		);
+
+		for (const mapping of mappings) {
+			const title = projectsById.get(mapping.projectId);
+			const line = target.createDiv({ cls: "vnt-folder-rule" });
+			if (title) {
+				line.setText(`${mapping.pattern} → ${title} (#${mapping.projectId})`);
+			} else {
+				line.addClass("vnt-is-warning");
+				line.setText(
+					`${mapping.pattern} → project #${mapping.projectId} ` +
+						"(not in the loaded project list — run Test connection to check)",
+				);
+			}
+		}
+
+		for (const error of errors) {
+			const line = target.createDiv({
+				cls: "vnt-folder-rule vnt-is-error",
+			});
+			line.setText(`Line ${error.line} ignored — ${error.reason}: ${error.text}`);
+		}
 	}
 
 	display(): void {
@@ -84,6 +122,30 @@ export class VikunjaSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 			});
+
+		new Setting(containerEl)
+			.setName("Folder rules")
+			.setDesc(
+				'One rule per line, "pattern = project ID". Used only when a note has ' +
+					'no vikunja-project frontmatter. A pattern without "/" matches any ' +
+					'folder name at any depth, so "1204 *" keeps working when the folder ' +
+					"moves. First match wins; # starts a comment.",
+			)
+			.addTextArea((textArea) => {
+				textArea
+					.setPlaceholder("1204 * = 7\nClients/Acme/** = 12")
+					.setValue(this.plugin.settings.folderMappings)
+					.onChange(async (value) => {
+						this.plugin.settings.folderMappings = value;
+						await this.plugin.saveSettings();
+						this.renderFolderRulePreview(preview);
+					});
+				textArea.inputEl.rows = 5;
+				textArea.inputEl.addClass("vnt-folder-rules-input");
+			});
+
+		const preview = containerEl.createDiv({ cls: "vnt-folder-rules-preview" });
+		this.renderFolderRulePreview(preview);
 
 		new Setting(containerEl)
 			.setName("Default labels")

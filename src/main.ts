@@ -1,4 +1,5 @@
 import { Editor, Plugin } from "obsidian";
+import type { MarkdownFileInfo, MarkdownView } from "obsidian";
 import { VikunjaClient } from "./api";
 import { VikunjaSettingTab } from "./settings";
 import {
@@ -25,6 +26,12 @@ export interface VikunjaNoteTasksSettings {
 	apiToken: string;
 	defaultProjectId: number | null;
 	defaultProjectName: string;
+	/**
+	 * Folder-to-project rules, one `pattern = projectId` per line. Parsed by
+	 * `parseFolderMappings`; consulted only when a note has no `vikunja-project`
+	 * frontmatter key.
+	 */
+	folderMappings: string;
 	defaultLabels: string;
 	includeUndated: boolean;
 	openInBrowserAfterCreate: boolean;
@@ -37,6 +44,7 @@ export const DEFAULT_SETTINGS: VikunjaNoteTasksSettings = {
 	apiToken: "",
 	defaultProjectId: null,
 	defaultProjectName: "",
+	folderMappings: "",
 	defaultLabels: "",
 	includeUndated: false,
 	openInBrowserAfterCreate: false,
@@ -50,17 +58,20 @@ export default class VikunjaNoteTasksPlugin extends Plugin {
 		await this.loadSettings();
 		this.addSettingTab(new VikunjaSettingTab(this.app, this));
 
+		// The two creating commands take the note's file as well as the editor:
+		// routing reads that note's frontmatter and folder path.
 		this.addCommand({
 			id: "create-task-from-selection-or-line",
 			name: "Create task from selection or line",
-			editorCallback: (editor: Editor) =>
-				createFromSelectionOrLine(this, editor),
+			editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) =>
+				createFromSelectionOrLine(this, editor, ctx.file),
 		});
 
 		this.addCommand({
 			id: "push-all-open-tasks",
 			name: "Push all open tasks in note to Vikunja",
-			editorCallback: (editor: Editor) => pushAllOpenTasks(this, editor),
+			editorCallback: (editor: Editor, ctx: MarkdownView | MarkdownFileInfo) =>
+				pushAllOpenTasks(this, editor, ctx.file),
 		});
 
 		this.addCommand({

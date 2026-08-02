@@ -25,3 +25,27 @@
 .vnt-test-connection-result.vnt-is-success {
 	color: var(--text-success);
 }
+
+.vnt-folder-rules-input {
+	width: 100%;
+	font-family: var(--font-monospace);
+	resize: vertical;
+}
+
+.vnt-folder-rules-preview {
+	margin: 0.25em 0 1em 0;
+}
+
+.vnt-folder-rule {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	font-family: var(--font-monospace);
+}
+
+.vnt-folder-rule.vnt-is-warning {
+	color: var(--text-warning);
+}
+
+.vnt-folder-rule.vnt-is-error {
+	color: var(--text-error);
+}

@@ -59,13 +59,19 @@ guidelines) — assign your own if you like.
 | Insert today's Vikunja tasks | Inserts a read-only callout of tasks due today or overdue. Re-running replaces the block. |
 | Open Vikunja task in browser | Opens the current line's task in your browser. |
 
+The two creating commands pick their destination project from the note's
+`vikunja-project` frontmatter, then your folder rules, then the default project —
+see [capture routing](USER_GUIDE.md#capture-routing). Each success Notice names
+the project it used and why.
+
 ## Settings
 
 | Setting | Purpose |
 | --- | --- |
 | Base URL | Your Vikunja instance, e.g. `https://vikunja.example.com`. |
 | API token | A Vikunja API token. **Stored unencrypted** in the vault's plugin data — use a least-privilege token. |
-| Default project | Where new tasks are created (fill the dropdown with **Test connection**). |
+| Default project | Where new tasks are created when nothing more specific applies (fill the dropdown with **Test connection**). |
+| Folder rules | `pattern = project ID` per line, routing captures by the note's folder. See [capture routing](USER_GUIDE.md#capture-routing). |
 | Default labels | Comma-separated labels applied to every created task. |
 | Include undated tasks | Whether "Insert today's tasks" also lists tasks with no due date. |
 | Open in browser after create | Open each newly created task in the browser. |

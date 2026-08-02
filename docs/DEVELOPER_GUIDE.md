@@ -11,12 +11,13 @@ Everything a contributor needs to understand the codebase. Pair this with
 | `src/types.ts` | no | Shared Vikunja/data interfaces. |
 | `src/markers.ts` | no | Pure line/marker/block string logic. **Unit-tested.** |
 | `src/render.ts` | no | Pure rendering of the read-only "today" callout. **Unit-tested.** |
+| `src/routing.ts` | no | Pure capture routing: folder globs and the resolution order. **Unit-tested.** |
 | `src/api.ts` | `requestUrl` only | Thin typed Vikunja REST client + typed error class. |
 | `src/settings.ts` | yes | Settings tab UI and connection test. |
 | `src/main.ts` | yes | Plugin entry point; wires commands to logic. |
 
-**Invariant:** `types.ts`, `markers.ts`, and `render.ts` must never import
-`obsidian`. That keeps them runnable under `node --test` with no mocking. If you
+**Invariant:** `types.ts`, `markers.ts`, `render.ts`, and `routing.ts` must never
+import `obsidian`. That keeps them runnable under `node --test` with no mocking. If you
 need Obsidian, the code belongs in `main.ts` or `settings.ts`.
 
 ## Marker format spec
@@ -58,6 +59,28 @@ punctuation are preserved (they are part of the title).
   the rewrite reads `… text [vk](url) <!--vk:id--> → [[Note]]`.
 - The function is surgical on one line; the *caller* guarantees it is only run on
   marker-free lines. Editor writes replace only the exact target line(s).
+
+## Capture-routing invariants (`routing.ts`)
+
+`resolveProject` returns a discriminated `RouteOutcome` rather than throwing:
+the module is Obsidian-free, and `api.ts` (which owns `VikunjaApiError`) imports
+`requestUrl`. `commands.ts` maps a failed outcome onto a `config` error.
+
+- **Order:** frontmatter `vikunja-project` → first matching folder rule → default
+  project. First answer wins.
+- **A malformed `vikunja-project` is an error, not a fallback.** Falling through
+  to the default project would create the task somewhere the note explicitly
+  disclaimed. An *absent or empty* key is "no opinion" and falls through normally
+  — Obsidian's Properties editor leaves empty keys behind routinely.
+- **Routing resolves once per command invocation**, before any network call, so a
+  batch push cannot create tasks in two different projects or fail halfway on a
+  routing problem.
+- **Glob semantics:** a pattern without `/` matches any single folder *name* at
+  any depth (so a folder can move between parents without breaking routing); a
+  pattern with `/` matches the full folder path. `*` stays within a segment, `**`
+  crosses segments, a leading `**/` and a trailing `/**` are both optional
+  matches. Case-insensitive. Unparseable rule lines are dropped from matching and
+  reported to the settings UI by `parseFolderMappings`.
 
 ## Done-state mapping
 

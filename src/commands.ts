@@ -1,4 +1,5 @@
 import { Editor, Notice } from "obsidian";
+import type { TFile } from "obsidian";
 import type VikunjaNoteTasksPlugin from "./main";
 import { VikunjaClient, VikunjaApiError, describeVikunjaError } from "./api";
 import {
@@ -12,8 +13,16 @@ import {
 	setCheckboxState,
 } from "./markers";
 import { hasRealDate, renderTodayBlock, taskWebUrl } from "./render";
+import {
+	folderPathOf,
+	parseFolderMappings,
+	resolveProject,
+} from "./routing";
 import { parseCsvList, dedupeCaseInsensitive, summarize } from "./util";
 import type { VikunjaTask } from "./types";
+
+/** The frontmatter key that routes a note's captures. */
+const PROJECT_KEY = "vikunja-project";
 
 /** Replaces exactly one line, leaving every other character in the note intact. */
 function replaceLine(editor: Editor, lineIndex: number, text: string): void {
@@ -55,20 +64,13 @@ async function ensureDefaultLabelIds(
 	return resolveLabelIds(client, names);
 }
 
-/** Creates one task in the default project and attaches the given labels. */
+/** Creates one task in the given project and attaches the given labels. */
 async function createOneTask(
-	plugin: VikunjaNoteTasksPlugin,
 	client: VikunjaClient,
+	projectId: number,
 	title: string,
 	labelIds: number[],
 ): Promise<VikunjaTask> {
-	const projectId = plugin.settings.defaultProjectId;
-	if (projectId === null) {
-		throw new VikunjaApiError(
-			"config",
-			"Choose a default project in the plugin settings first.",
-		);
-	}
 	const task = await client.createTask(projectId, { title });
 	for (const id of labelIds) {
 		await client.addLabelToTask(task.id, id);
@@ -76,18 +78,81 @@ async function createOneTask(
 	return task;
 }
 
+/** A resolved capture destination plus a phrase naming how it was chosen. */
+interface Route {
+	projectId: number;
+	/** e.g. `Website (#7) via folder rule "1204 *"` — used in Notices. */
+	description: string;
+}
+
+/** Names a project by its cached title when known, by id otherwise. */
+function projectLabel(plugin: VikunjaNoteTasksPlugin, id: number): string {
+	const found = plugin.settings.cachedProjects.find((p) => p.id === id);
+	return found ? `${found.title} (#${id})` : `project #${id}`;
+}
+
+/**
+ * Resolves which project this note's captures go to: frontmatter, then the
+ * first matching folder rule, then the default project. Throws a `config` error
+ * — before anything is created — when the note is unroutable.
+ */
+function routeProjectForNote(
+	plugin: VikunjaNoteTasksPlugin,
+	file: TFile | null,
+): Route {
+	const frontmatter = file
+		? plugin.app.metadataCache.getFileCache(file)?.frontmatter
+		: undefined;
+	const { mappings } = parseFolderMappings(plugin.settings.folderMappings);
+
+	const outcome = resolveProject({
+		frontmatterValue: frontmatter?.[PROJECT_KEY],
+		folderPath: file ? folderPathOf(file.path) : "",
+		mappings,
+		defaultProjectId: plugin.settings.defaultProjectId,
+	});
+
+	if (!outcome.ok) {
+		if (outcome.reason === "invalid-frontmatter") {
+			throw new VikunjaApiError(
+				"config",
+				`This note's "${PROJECT_KEY}" is "${outcome.raw}", which is not a ` +
+					"numeric project ID. Fix or remove the key — nothing was created.",
+			);
+		}
+		throw new VikunjaApiError(
+			"config",
+			`No project to create in. Set "${PROJECT_KEY}" in this note, add a ` +
+				"folder rule, or choose a default project in the plugin settings.",
+		);
+	}
+
+	const name = projectLabel(plugin, outcome.projectId);
+	const description =
+		outcome.source === "frontmatter"
+			? `${name} from this note's frontmatter`
+			: outcome.source === "folder"
+				? `${name} via folder rule "${outcome.pattern}"`
+				: `${name} (default project)`;
+	return { projectId: outcome.projectId, description };
+}
+
 /**
  * "Create Vikunja task from selection or line": creates a task from the
  * selection (or the current line), then rewrites that line in place with a link
- * and marker. Refuses to act on a line that already has a marker.
+ * and marker. Refuses to act on a line that already has a marker. The
+ * destination project is resolved from `file` (frontmatter, then folder rules,
+ * then the default).
  */
 export async function createFromSelectionOrLine(
 	plugin: VikunjaNoteTasksPlugin,
 	editor: Editor,
+	file: TFile | null,
 ): Promise<void> {
 	try {
 		const client = plugin.getClient();
 		client.ensureConfigured();
+		const route = routeProjectForNote(plugin, file);
 
 		const lineIndex = editor.getCursor("from").line;
 		const lineText = editor.getLine(lineIndex);
@@ -107,10 +172,15 @@ export async function createFromSelectionOrLine(
 		}
 
 		const labelIds = await ensureDefaultLabelIds(plugin, client);
-		const task = await createOneTask(plugin, client, title, labelIds);
+		const task = await createOneTask(
+			client,
+			route.projectId,
+			title,
+			labelIds,
+		);
 		const url = taskWebUrl(plugin.settings.baseUrl, task.id);
 		replaceLine(editor, lineIndex, rewriteLineWithTask(lineText, task.id, url));
-		new Notice(`Vikunja: created task #${task.id}.`);
+		new Notice(`Vikunja: created task #${task.id} in ${route.description}.`);
 
 		if (plugin.settings.openInBrowserAfterCreate) {
 			window.open(url, "_blank");
@@ -128,10 +198,15 @@ export async function createFromSelectionOrLine(
 export async function pushAllOpenTasks(
 	plugin: VikunjaNoteTasksPlugin,
 	editor: Editor,
+	file: TFile | null,
 ): Promise<void> {
 	const client = plugin.getClient();
+	let route: Route;
 	try {
 		client.ensureConfigured();
+		// Resolved once per note, before any task is created: every line in a
+		// note shares one destination.
+		route = routeProjectForNote(plugin, file);
 	} catch (err) {
 		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
 		return;
@@ -169,12 +244,19 @@ export async function pushAllOpenTasks(
 				skipped++;
 				continue;
 			}
-			const task = await createOneTask(plugin, client, title, labelIds);
+			const task = await createOneTask(
+				client,
+				route.projectId,
+				title,
+				labelIds,
+			);
 			const url = taskWebUrl(plugin.settings.baseUrl, task.id);
 			replaceLine(editor, i, rewriteLineWithTask(lineText, task.id, url));
 			created++;
 		}
-		new Notice(`Vikunja: ${summarize(created, skipped)}`);
+		new Notice(
+			`Vikunja: ${summarize(created, skipped)} Destination: ${route.description}.`,
+		);
 	} catch (err) {
 		new Notice(
 			`Vikunja: ${describeVikunjaError(err)} Created ${created} before stopping.`,

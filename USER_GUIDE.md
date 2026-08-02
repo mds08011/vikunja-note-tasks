@@ -39,7 +39,8 @@ any `/api/...` suffix. The plugin adds the API path itself.
 
 Open a project in the Vikunja web UI and look at the URL:
 `…/projects/7/…` → the project ID is `7`. You'll usually pick the project from a
-dropdown instead, but IDs matter for the [frontmatter contract](#frontmatter-contract).
+dropdown instead, but IDs are what the [frontmatter contract](#frontmatter-contract)
+and [folder rules](#folder-rules) route on.
 
 ## Settings
 
@@ -49,7 +50,8 @@ Open **Settings → Community plugins → Vikunja Note Tasks**.
 | --- | --- |
 | **Base URL** | `https://vikunja.example.com` |
 | **API token** | The token from step 1. Stored **unencrypted** in the vault's plugin data — use a least-privilege token. |
-| **Default project** | Click **Test connection** first to load the list, then pick one. |
+| **Default project** | Click **Test connection** first to load the list, then pick one. Used when nothing more specific routes the note. |
+| **Folder rules** | Optional. One `pattern = project ID` per line, e.g. `1204 * = 7`. See [capture routing](#capture-routing). |
 | **Default labels** | Comma-separated, e.g. `inbox, from-obsidian`. Applied to every created task; missing labels are created for you. |
 | **Include undated tasks** | Whether "Insert today's tasks" also lists tasks with no due date. |
 | **Open in browser after create** | Open each newly created task automatically. |
@@ -153,9 +155,7 @@ it just builds the URL from the marker, so it works offline.
 
 ## Frontmatter contract
 
-The plugin reserves the `vikunja-*` frontmatter namespace. **In 0.1 these keys
-are documented but not yet used for routing** (new tasks always go to the default
-project). Routing ships in 0.2 — adopt the keys now and your vault is ready.
+The plugin reserves the `vikunja-*` frontmatter namespace.
 
 ```yaml
 ---
@@ -168,19 +168,67 @@ vikunja-labels:               # merged with the settings' default labels
 ```
 
 - **`vikunja-project`** — the numeric project ID. This is the authoritative
-  routing key.
+  routing key. **Active** — see [capture routing](#capture-routing) below.
 - **`vikunja-project-name`** — a human label, kept in a *separate* key because
   Obsidian's Properties editor strips YAML comments, so you can't annotate the ID
   inline. Informational only; the plugin never routes on the name.
 - **`vikunja-labels`** — a list, merged with the default labels from settings.
+  **Not yet read** — label merging is still to come in 0.2; today every created
+  task gets the settings' default labels only.
 
-### Resolution order (once routing ships in 0.2)
+## Capture routing
 
-1. Note frontmatter (`vikunja-project`)
-2. Folder-to-project mapping (plugin settings)
-3. Default project (settings)
+Both creating commands — "Create task from selection or line" and "Push all open
+tasks in note to Vikunja" — decide where the task goes in this order, stopping at
+the first answer:
 
-0.1 uses the default project only.
+1. **`vikunja-project` in the note's frontmatter.**
+2. **The first matching folder rule**, in the order you listed them in settings.
+3. **The default project** from settings.
+
+Every success Notice names the destination and the step that chose it, e.g.
+`created task #123 in Website (#7) via folder rule "1204 *"`, so a
+misrouted capture is visible immediately rather than days later.
+
+### Folder rules
+
+In **Settings → Vikunja Note Tasks → Folder rules**, one rule per line:
+
+```
+# job folders route by number, wherever they live
+1204 * = 7
+1300 * = 9
+
+Clients/Acme/** = 12
+```
+
+- A pattern with **no `/`** is matched against each individual **folder name**, at
+  any depth. `1204 *` matches `Active/1204 Website/Notes` *and*
+  `Archive/2024/1204 Website` — so moving a job folder from `Active/` to
+  `Archive/` never breaks its routing. That is the point of matching names rather
+  than paths.
+- A pattern **containing `/`** is matched against the whole folder path.
+  `Clients/Acme/**` matches `Clients/Acme` and everything beneath it; a leading
+  `**/` (as in `**/Clients/Acme`) lets the rule match at any depth.
+- `*` matches within one folder name; `**` crosses folders; `?` matches a single
+  character. Matching ignores case.
+- **First match wins**, so put your most specific rules first.
+- Blank lines and lines starting with `#` are ignored.
+- The settings tab previews each rule beneath the box, resolving IDs to project
+  names. A line it can't parse is listed there as ignored — if a rule isn't
+  showing up, check that preview first.
+
+### When routing can't decide
+
+- **`vikunja-project` is present but isn't a number** (e.g. you typed a project
+  *name*): the command stops and tells you, and **creates nothing**. It does not
+  quietly fall back to the default project — the note explicitly asked for a
+  different destination, so guessing would put the task somewhere wrong.
+- **Nothing matches and there's no default project**: the command stops and asks
+  you to set one of the three.
+
+A note at the vault root has no folder name, so folder rules never match it; it
+routes by frontmatter or falls through to the default project.
 
 ## Mobile
 
@@ -204,4 +252,7 @@ Now you can capture a line to Vikunja with one tap while editing on your phone.
 | "Could not reach Vikunja at …" | Wrong Base URL, server down, or offline | Check the URL (no `/api` suffix), that the server is reachable, and your connection. No note is changed when this happens. |
 | "Vikunja returned not found" on refresh | The task was deleted in Vikunja | The plugin reports the ID and **leaves your line untouched** — it never deletes or edits the text for a missing task. |
 | Project dropdown empty | Haven't tested the connection yet | Click **Test connection** in settings. |
+| Task landed in the wrong project | A higher-priority routing step won | Read the Notice — it names the project *and* the step that chose it. Check `vikunja-project` in the note, then your folder rules in order (first match wins). |
+| A folder rule seems ignored | It didn't parse, or an earlier rule matched first | Check the rule preview under the **Folder rules** box; unparseable lines are listed there as ignored. |
+| "is not a numeric project ID" | `vikunja-project` holds a name, not an ID | Put the numeric ID in `vikunja-project` and the name in `vikunja-project-name`. Nothing was created. |
 | Nothing happens on a line | The line already has a `<!--vk:…-->` marker | That line is already captured; the marker prevents duplicate creation. |
