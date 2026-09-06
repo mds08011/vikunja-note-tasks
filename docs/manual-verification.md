@@ -136,6 +136,14 @@ vikunja-labels:
       marked ones, summary names the destination project once.
 - [ ] Per-line tags work in a batch push (different tags on different lines).
 - [ ] **Mark done** / **Toggle done** — flips in Vikunja and locally.
+- [ ] **Fields survive being marked done.** Capture a line with a date and a
+      tag, e.g. `- [ ] Order rebar 📅 2026-08-10 #urgent`, then set a priority
+      and a description on the task in Vikunja's web UI. Mark it done from
+      Obsidian, then **re-open the task in Vikunja**: due date, priority,
+      description, and label must all still be there. Toggle it back undone and
+      check again. The update endpoint is a full replace, so a regression here
+      silently blanks fields rather than erroring — nothing in the Obsidian UI
+      will tell you it happened.
 - [ ] **Refresh statuses** — mirrors remote state; a task deleted in Vikunja is
       *reported* and its line left untouched.
 - [ ] **Insert today's tasks** — re-running replaces the block instead of

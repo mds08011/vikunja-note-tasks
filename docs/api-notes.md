@@ -39,7 +39,7 @@ the endpoints live. See `docs/adr/0003-v2-first-api-strategy.md`.
 | List labels | `GET` | `/api/v1/labels` | Paginated. |
 | Create task | `PUT` | `/api/v1/projects/{id}/tasks` | Body: `{ title, due_date?, priority? }`. Returns the created task with its `id`. |
 | Get task | `GET` | `/api/v1/tasks/{id}` | Used by Refresh to read `done`. |
-| Update task (done) | `POST` | `/api/v1/tasks/{id}` | Partial update. Body: `{ done: boolean }`. |
+| Update task (done) | `POST` | `/api/v1/tasks/{id}` | **Full replace, not a partial update.** Send the whole task with `done` merged in — see the quirk below. |
 | Add label to task | `PUT` | `/api/v1/tasks/{id}/labels` | Body: `{ label_id: number }`. |
 | Create label | `PUT` | `/api/v1/labels` | Body: `{ title }`. Used to auto-create default labels that don't exist yet. |
 | List tasks (filtered) | `GET` | `/api/v1/tasks` | Query params below. |
@@ -82,6 +82,14 @@ the endpoints live. See `docs/adr/0003-v2-first-api-strategy.md`.
 - **Pagination:** list endpoints return an array plus an
   `x-pagination-total-pages` header. The client simply pages until it receives a
   short page, up to a safety cap of 50 pages.
+- **Updates are a full replace.** `POST /tasks/{id}` writes every field of the
+  task from the request body, so any field omitted comes back as its Go zero
+  value. A bare `{ done: true }` therefore blanks `due_date` (to the year-0001
+  zero time), `priority` (to 0), and `description` (to `""`). Title survives, and
+  labels survive because they live in a join table — which makes the data loss
+  easy to miss. `client.setTaskDone` guards against this by reading the task and
+  sending the whole object back with `done` merged in. **v2 is not a fix:**
+  `PUT /api/v2/tasks/{id}` has identical semantics, verified against 2.6.0.
 - **Create verb:** Vikunja uses `PUT` (not `POST`) to *create* a task inside a
   project, and `POST` to *update* an existing task. This is intentional in their
   API, and easy to get backwards.

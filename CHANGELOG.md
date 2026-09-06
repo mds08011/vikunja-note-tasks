@@ -37,6 +37,13 @@ GitHub release notes are assembled from this file.
 
 ### Fixed
 
+- **Mark done / Toggle done no longer wipe the task's due date, priority, and
+  description.** Vikunja's task-update endpoint is a full replace rather than a
+  partial update, so the previous bare `{ done }` body blanked every field it
+  omitted. The commands now read the task and send it back with only `done`
+  changed. This mattered most in combination with the new emoji due dates: a
+  captured `📅` date was destroyed the first time the task was marked done.
+
 - The project picker no longer risks discarding a choice on Obsidian builds that
   close a modal before reporting the selection.
 - "Create task from selection or line" now reports "already captured" on a

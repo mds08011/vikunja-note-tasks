@@ -223,9 +223,24 @@ export class VikunjaClient {
 		return this.request<VikunjaTask>("GET", `/tasks/${taskId}`);
 	}
 
-	/** POST /tasks/{id} — partial update; here used to set the done flag. */
+	/**
+	 * POST /tasks/{id} — set the done flag.
+	 *
+	 * This endpoint is a FULL REPLACE, not a partial update: any field left out
+	 * of the body is written back as its zero value. Sending a bare `{ done }`
+	 * therefore wipes the task's due date, priority, and description — which
+	 * matters especially since capture can now set a due date from a `📅` line.
+	 * (v2's `PUT /tasks/{id}` behaves the same way, so this is not a v1 quirk
+	 * and migrating the call would not fix it.) So: read the task, merge the one
+	 * field we mean to change, and send the whole object back. The extra GET is
+	 * the cost of the endpoint's semantics, not an optimisation we can skip.
+	 */
 	async setTaskDone(taskId: number, done: boolean): Promise<VikunjaTask> {
-		return this.request<VikunjaTask>("POST", `/tasks/${taskId}`, { done });
+		const current = await this.getTask(taskId);
+		return this.request<VikunjaTask>("POST", `/tasks/${taskId}`, {
+			...current,
+			done,
+		});
 	}
 
 	/** PUT /tasks/{id}/labels — attach an existing label to a task. */
