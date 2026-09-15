@@ -8,6 +8,8 @@ GitHub release notes are assembled from this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-14
+
 ### Added
 
 - **Capture routing.** The two creating commands now resolve a destination

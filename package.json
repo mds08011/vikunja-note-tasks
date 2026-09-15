@@ -1,6 +1,6 @@
 {
 	"name": "vikunja-note-tasks",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Unofficial Obsidian plugin for explicit, user-triggered task capture and viewing against a self-hosted Vikunja server.",
 	"main": "main.js",
 	"type": "module",

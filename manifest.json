@@ -1,7 +1,7 @@
 {
 	"id": "vikunja-note-tasks",
 	"name": "Vikunja Note Tasks",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"minAppVersion": "1.5.0",
 	"description": "Create, update, and view tasks on your own self-hosted Vikunja server through explicit, user-triggered commands. Unofficial integration with no background sync, no reconciliation, and no telemetry.",
 	"author": "Malcolm Smith",
