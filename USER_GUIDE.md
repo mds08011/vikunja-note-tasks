@@ -201,13 +201,62 @@ first answer:
 
 1. **A project you picked** with "Create task in project…" — that command asks
    every time, and your choice wins over everything below for that one task.
-2. **`vikunja-project` in the note's frontmatter.**
-3. **The first matching folder rule**, in the order you listed them in settings.
-4. **The default project** from settings.
+2. **The first matching heading rule**, against the nearest heading above the
+   line being captured.
+3. **`vikunja-project` in the note's frontmatter.**
+4. **The first matching folder rule**, in the order you listed them in settings.
+5. **The default project** from settings.
+
+**Heading rules sit above frontmatter on purpose: the narrower statement wins.**
+Frontmatter is an opinion about a whole note; a heading rule is an opinion about
+one section of it. A note with no heading rules routes exactly as it did before
+they existed.
 
 Every success Notice names the destination and the step that chose it, e.g.
 `created task #123 in Website (#7) via folder rule "1204 *"`, so a
 misrouted capture is visible immediately rather than days later.
+
+### Heading rules
+
+In **Settings → Vikunja Note Tasks → Heading rules**, same syntax as folder
+rules, matched against the heading text rather than a path:
+
+```
+6100 * = 18299
+*Pursuit* = 28631
+Personal = 18294
+```
+
+This is what lets **one** note push to several projects. A dictated capture
+polished into Markdown arrives grouped by job:
+
+```md
+## 6100 El Toro
+- [ ] Chase the coating submittal 📅 2026-09-24
+
+## Pursuits
+- [ ] Send the Sweetwater RFI
+
+## Personal
+- [ ] Book the dentist
+```
+
+"Push all open tasks in note to Vikunja" sends each line to the project its own
+section names — three projects, one command — and the notice reports the split:
+**"Created 3, skipped 0. Destinations: 6100 El Toro WWTP (1), Pursuits (1),
+Personal (1)."**
+
+- The pattern is matched against the **whole heading**, case-insensitively, with
+  the same `*`, `**` and `?` wildcards. `6100 *` matches "6100 El Toro WWTP" but
+  not "Job 6100" — anchor with `*` on both sides if you want it looser.
+- Emphasis, inline code, wikilinks and trailing `#`s are stripped before
+  matching, so `## **6100 El Toro**` routes the same as `## 6100 El Toro`. A
+  model that varies its formatting between runs cannot change where tasks land.
+- **Headings inside fenced code blocks are ignored.** A quoted `# comment` in a
+  shell snippet would otherwise re-route everything below it, and the note would
+  look perfectly normal while it happened.
+- Lines above the first heading fall through to frontmatter, folder rules and
+  the default, as they always did.
 
 ### Folder rules
 

@@ -33,6 +33,13 @@ export interface VikunjaNoteTasksSettings {
 	 * frontmatter key.
 	 */
 	folderMappings: string;
+	/**
+	 * Heading-to-project rules, same `pattern = projectId` syntax as
+	 * `folderMappings`, matched against the nearest heading above a captured
+	 * line. Lets one note push tasks to several projects — a dictated capture
+	 * grouped under a heading per job is the case this exists for.
+	 */
+	headingMappings: string;
 	defaultLabels: string;
 	includeUndated: boolean;
 	openInBrowserAfterCreate: boolean;
@@ -51,6 +58,7 @@ export const DEFAULT_SETTINGS: VikunjaNoteTasksSettings = {
 	defaultProjectId: null,
 	defaultProjectName: "",
 	folderMappings: "",
+	headingMappings: "",
 	defaultLabels: "",
 	includeUndated: false,
 	openInBrowserAfterCreate: false,

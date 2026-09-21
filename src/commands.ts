@@ -17,6 +17,7 @@ import {
 	setCheckboxState,
 } from "./markers";
 import { hasRealDate, renderTodayBlock, taskWebUrl } from "./render";
+import { headingsForLines, headingText } from "./headings";
 import {
 	folderPathOf,
 	parseFolderMappings,
@@ -187,6 +188,7 @@ function contextForNote(
 	plugin: VikunjaNoteTasksPlugin,
 	file: TFile | null,
 	pickedProjectId?: number,
+	heading?: string | null,
 ): NoteContext {
 	const frontmatter = file
 		? plugin.app.metadataCache.getFileCache(file)?.frontmatter
@@ -206,12 +208,19 @@ function contextForNote(
 	}
 
 	const { mappings } = parseFolderMappings(plugin.settings.folderMappings);
+	// Same parser, same syntax: a heading rule is a folder rule pointed at the
+	// section a line is in rather than the folder the note is in.
+	const { mappings: headingMappings } = parseFolderMappings(
+		plugin.settings.headingMappings,
+	);
 
 	const outcome = resolveProject({
 		frontmatterValue: frontmatter?.[PROJECT_KEY],
 		folderPath: file ? folderPathOf(file.path) : "",
 		mappings,
 		defaultProjectId: plugin.settings.defaultProjectId,
+		heading,
+		headingMappings,
 	});
 
 	if (!outcome.ok) {
@@ -231,11 +240,13 @@ function contextForNote(
 
 	const name = projectLabel(plugin, outcome.projectId);
 	const description =
-		outcome.source === "frontmatter"
-			? `${name} from this note's frontmatter`
-			: outcome.source === "folder"
-				? `${name} via folder rule "${outcome.pattern}"`
-				: `${name} (default project)`;
+		outcome.source === "heading"
+			? `${name} via heading rule "${outcome.pattern}" under "${outcome.heading}"`
+			: outcome.source === "frontmatter"
+				? `${name} from this note's frontmatter`
+				: outcome.source === "folder"
+					? `${name} via folder rule "${outcome.pattern}"`
+					: `${name} (default project)`;
 	return {
 		route: { projectId: outcome.projectId, description },
 		noteLabels,
@@ -412,28 +423,25 @@ export async function pushAllOpenTasks(
 	file: TFile | null,
 ): Promise<void> {
 	const client = plugin.getClient();
-	let route: Route;
-	let noteLabels: string[];
 	try {
 		client.ensureConfigured();
-		// Resolved once per note, before any task is created: every line in a
-		// note shares one destination.
-		({ route, noteLabels } = contextForNote(plugin, file));
 	} catch (err) {
 		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
 		return;
 	}
 
+	const lineCount = editor.lineCount();
+	const lines: string[] = [];
+	for (let i = 0; i < lineCount; i++) lines.push(editor.getLine(i));
+	const headings = headingsForLines(lines);
+
 	const targets: number[] = [];
 	let skipped = 0;
-	const lineCount = editor.lineCount();
-	for (let i = 0; i < lineCount; i++) {
-		const text = editor.getLine(i);
-		if (isUncheckedTaskLine(text)) {
-			if (hasMarker(text)) skipped++;
-			else targets.push(i);
-		}
-	}
+	lines.forEach((text, i) => {
+		if (!isUncheckedTaskLine(text)) return;
+		if (hasMarker(text)) skipped++;
+		else targets.push(i);
+	});
 
 	if (targets.length === 0) {
 		const tail = skipped > 0 ? ` (${skipped} already captured)` : "";
@@ -441,7 +449,38 @@ export async function pushAllOpenTasks(
 		return;
 	}
 
+	// Every destination is resolved BEFORE anything is created, so a note with
+	// one unroutable section fails whole rather than half-captured. Resolution
+	// is memoised per section: a capture with forty lines under three headings
+	// asks the routing layer three times.
+	const routeByHeading = new Map<string, Route>();
+	const routeFor = new Map<number, Route>();
+	let noteLabels: string[] = [];
+	try {
+		for (const i of targets) {
+			const raw = headings[i];
+			const section = raw === null ? "" : headingText(raw);
+			let route = routeByHeading.get(section);
+			if (!route) {
+				const context = contextForNote(
+					plugin,
+					file,
+					undefined,
+					section === "" ? null : section,
+				);
+				route = context.route;
+				noteLabels = context.noteLabels;
+				routeByHeading.set(section, route);
+			}
+			routeFor.set(i, route);
+		}
+	} catch (err) {
+		new Notice(`Vikunja: ${describeVikunjaError(err)}`);
+		return;
+	}
+
 	let created = 0;
+	const countByDestination = new Map<string, number>();
 	try {
 		// One resolver for the whole batch: the label list is fetched at most
 		// once no matter how many distinct tags the note's lines carry.
@@ -458,6 +497,11 @@ export async function pushAllOpenTasks(
 				skipped++;
 				continue;
 			}
+			const route = routeFor.get(i);
+			if (!route) {
+				skipped++;
+				continue;
+			}
 			const labelIds = await labels.idsFor(
 				labelNamesFor(plugin, noteLabels, lineText),
 			);
@@ -471,9 +515,11 @@ export async function pushAllOpenTasks(
 			const url = taskWebUrl(plugin.settings.baseUrl, task.id);
 			replaceLine(editor, i, rewriteLineWithTask(lineText, task.id, url));
 			created++;
+			const name = projectLabel(plugin, route.projectId);
+			countByDestination.set(name, (countByDestination.get(name) ?? 0) + 1);
 		}
 		new Notice(
-			`Vikunja: ${summarize(created, skipped)} Destination: ${route.description}.`,
+			`Vikunja: ${summarize(created, skipped)} ${describeDestinations(countByDestination, routeByHeading)}`,
 		);
 	} catch (err) {
 		new Notice(
@@ -483,10 +529,28 @@ export async function pushAllOpenTasks(
 }
 
 /**
- * Shared implementation for the two done-state commands. `mode: "done"` always
- * sets done; `mode: "toggle"` flips based on the current local checkbox state.
- * Sets the state in Vikunja first, then mirrors it onto the local checkbox.
+ * The destination phrase for the bulk push.
+ *
+ * One destination reads as it always did — naming the rule that chose it, so a
+ * misroute is visible immediately. Several destinations name each project and
+ * its count instead: with tasks going three ways, which rule matched matters
+ * less than whether the split is the one you expected.
  */
+function describeDestinations(
+	countByDestination: Map<string, number>,
+	routeByHeading: Map<string, Route>,
+): string {
+	if (countByDestination.size === 0) return "";
+	if (countByDestination.size === 1 && routeByHeading.size === 1) {
+		const [route] = routeByHeading.values();
+		return `Destination: ${route.description}.`;
+	}
+	const parts = [...countByDestination.entries()]
+		.sort((a, b) => b[1] - a[1])
+		.map(([name, count]) => `${name} (${count})`);
+	return `Destinations: ${parts.join(", ")}.`;
+}
+
 export async function setTaskDoneOnLine(
 	plugin: VikunjaNoteTasksPlugin,
 	editor: Editor,

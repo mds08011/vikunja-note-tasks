@@ -53,7 +53,7 @@ guidelines) — assign your own if you like.
 | --- | --- |
 | Create task from selection or line | Creates a Vikunja task from the selection or current line and rewrites the line with a link + marker. |
 | Create task in project… | Same, but a fuzzy picker chooses the project for this one task, overriding frontmatter and folder rules. |
-| Push all open tasks in note to Vikunja | Creates a task for every unmarked `- [ ]` line, rewrites each, and shows a summary. |
+| Push all open tasks in note to Vikunja | Creates a task for every unmarked `- [ ]` line, rewrites each, and shows a summary. With heading rules set, each line goes to the project its own `## section` names. |
 | Mark Vikunja task done | Sets the current line's task done in Vikunja and flips the checkbox to `- [x]`. |
 | Toggle Vikunja task done/undone | Same, in either direction. |
 | Refresh Vikunja task statuses in note | Fetches the current done-state for every marker and updates local checkboxes to match. |
@@ -75,6 +75,7 @@ the project it used and why. Labels come from your default labels, the note's
 | API token | A Vikunja API token. **Stored unencrypted** in the vault's plugin data — use a least-privilege token. |
 | Default project | Where new tasks are created when nothing more specific applies (fill the dropdown with **Test connection**). |
 | Folder rules | `pattern = project ID` per line, routing captures by the note's folder. See [capture routing](USER_GUIDE.md#capture-routing). |
+| Heading rules | `pattern = project ID` per line, routing each captured line by the nearest heading above it — one note, several projects. Beats folder rules and frontmatter. |
 | Default labels | Comma-separated labels applied to every created task, on top of note and line labels. |
 | Parse Tasks-plugin emoji dates | Read a `📅 YYYY-MM-DD` due date off the captured line and keep emoji date fields out of the title. On by default. |
 | Include undated tasks | Whether "Insert today's tasks" also lists tasks with no due date. |

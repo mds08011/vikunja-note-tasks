@@ -8,6 +8,36 @@ GitHub release notes are assembled from this file.
 
 ## [Unreleased]
 
+### Added
+
+- **Heading rules.** A second rule box, same `pattern = project ID` syntax as
+  folder rules, matched against the nearest heading above a captured line. One
+  note can now push tasks to several projects in a single command: a dictated
+  capture grouped under `## 6100 El Toro`, `## Pursuits` and `## Personal` lands
+  in three projects instead of being split by hand at paste time.
+- "Push all open tasks in note to Vikunja" reports the split when tasks went
+  several ways — *"Created 7, skipped 1. Destinations: 6100 El Toro WWTP (4),
+  Pursuits (2), Personal (1)."* A single destination still names the rule that
+  chose it, unchanged.
+
+### Changed
+
+- **Routing order: a matching heading rule now outranks `vikunja-project`
+  frontmatter.** The narrower statement wins — frontmatter is about a whole
+  note, a heading rule is about one section of it. A note with no heading rules
+  routes exactly as before, so this is inert until you write one.
+- Every destination in a bulk push is resolved **before** any task is created,
+  so a note with one unroutable section fails whole rather than half-captured.
+
+### Notes
+
+- Headings inside fenced code blocks are ignored when deciding which section a
+  line is in: a quoted `# comment` in a shell snippet would otherwise re-route
+  every task below it, invisibly, since the note renders that line as code.
+- Emphasis, inline code, wikilinks and trailing `#`s are stripped from a heading
+  before matching, so a language model varying `## **6100**` against `## 6100`
+  between runs cannot change where tasks land.
+
 ## [0.2.0] - 2026-09-14
 
 ### Added

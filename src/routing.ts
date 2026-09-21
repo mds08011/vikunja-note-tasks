@@ -6,9 +6,16 @@
 // reads frontmatter and settings lives in commands.ts.
 //
 // Resolution order (documented in USER_GUIDE.md, "Frontmatter contract"):
-//   1. `vikunja-project` in the note's frontmatter — authoritative
-//   2. the first matching folder rule, in the order the user listed them
-//   3. the default project from settings
+//   1. the first matching heading rule, against the section the line is in
+//   2. `vikunja-project` in the note's frontmatter
+//   3. the first matching folder rule, in the order the user listed them
+//   4. the default project from settings
+//
+// Heading rules sit above frontmatter deliberately: **the narrower scope wins.**
+// Frontmatter is an opinion about a whole note, a heading rule is an opinion
+// about one section of it, and a capture that names three jobs under three
+// headings is precisely the case where the note-wide answer is the wrong one.
+// A note with no heading rules behaves exactly as it did before they existed.
 
 /** One folder rule: a glob pattern and the project it routes to. */
 export interface FolderMapping {
@@ -30,15 +37,17 @@ export interface ParsedFolderMappings {
 }
 
 /** Where a routing decision came from, for the user-facing Notice. */
-export type ProjectSource = "frontmatter" | "folder" | "default";
+export type ProjectSource = "heading" | "frontmatter" | "folder" | "default";
 
 export type RouteOutcome =
 	| {
 			ok: true;
 			projectId: number;
 			source: ProjectSource;
-			/** The rule that matched, when `source` is "folder". */
+			/** The rule that matched, when `source` is "folder" or "heading". */
 			pattern?: string;
+			/** The section that matched, when `source` is "heading". */
+			heading?: string;
 	  }
 	| { ok: false; reason: "invalid-frontmatter"; raw: string }
 	| { ok: false; reason: "unrouted" };
@@ -118,6 +127,25 @@ export function matchesFolderPattern(
 }
 
 /**
+ * Does a heading rule match the section a line sits in?
+ *
+ * The same glob syntax as folder rules, matched against the whole heading text,
+ * case-insensitively. `6100 *` matches "6100 El Toro WWTP"; `*Pursuit*` matches
+ * "Pursuits and bids". There is no path semantics here — a heading is a string,
+ * not a hierarchy — so a pattern containing `/` is matched literally against it.
+ */
+export function matchesHeadingPattern(
+	pattern: string,
+	heading: string,
+): boolean {
+	const trimmed = pattern.trim();
+	if (!trimmed) return false;
+	const text = heading.trim();
+	if (!text) return false;
+	return globToRegExp(trimmed).test(text);
+}
+
+/**
  * Parses the folder-rules textarea. One rule per line, `pattern = projectId`.
  * Blank lines and `#` comments are skipped. Unparseable lines are reported
  * rather than silently dropped, so the settings tab can show them.
@@ -194,24 +222,53 @@ export function resolveProject(input: {
 	folderPath: string;
 	mappings: FolderMapping[];
 	defaultProjectId: number | null;
+	/** The section a line sits in, when routing one line rather than a note. */
+	heading?: string | null;
+	headingMappings?: FolderMapping[];
 }): RouteOutcome {
-	const { frontmatterValue, folderPath, mappings, defaultProjectId } = input;
+	const {
+		frontmatterValue,
+		folderPath,
+		mappings,
+		defaultProjectId,
+		heading,
+		headingMappings = [],
+	} = input;
 
 	const hasFrontmatterValue =
 		frontmatterValue !== undefined &&
 		frontmatterValue !== null &&
 		!(typeof frontmatterValue === "string" && frontmatterValue.trim() === "");
 
+	// Checked first so a typo is reported rather than bypassed, then applied
+	// after the heading rules below.
+	if (hasFrontmatterValue && parseProjectId(frontmatterValue) === null) {
+		return {
+			ok: false,
+			reason: "invalid-frontmatter",
+			raw: String(frontmatterValue),
+		};
+	}
+
+	if (heading) {
+		for (const mapping of headingMappings) {
+			if (matchesHeadingPattern(mapping.pattern, heading)) {
+				return {
+					ok: true,
+					projectId: mapping.projectId,
+					source: "heading",
+					pattern: mapping.pattern,
+					heading,
+				};
+			}
+		}
+	}
+
 	if (hasFrontmatterValue) {
 		const fromNote = parseProjectId(frontmatterValue);
-		if (fromNote === null) {
-			return {
-				ok: false,
-				reason: "invalid-frontmatter",
-				raw: String(frontmatterValue),
-			};
+		if (fromNote !== null) {
+			return { ok: true, projectId: fromNote, source: "frontmatter" };
 		}
-		return { ok: true, projectId: fromNote, source: "frontmatter" };
 	}
 
 	for (const mapping of mappings) {

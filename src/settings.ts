@@ -20,9 +20,9 @@ export class VikunjaSettingTab extends PluginSettingTab {
 	 * resolves to (by cached name when known), and each unparseable line. Rules
 	 * that don't parse are skipped at capture time, so they must be visible here.
 	 */
-	private renderFolderRulePreview(target: HTMLElement): void {
+	private renderFolderRulePreview(target: HTMLElement, raw?: string): void {
 		target.empty();
-		const raw = this.plugin.settings.folderMappings;
+		raw = raw ?? this.plugin.settings.folderMappings;
 		if (!raw.trim()) return;
 
 		const { mappings, errors } = parseFolderMappings(raw);
@@ -146,6 +146,37 @@ export class VikunjaSettingTab extends PluginSettingTab {
 
 		const preview = containerEl.createDiv({ cls: "vnt-folder-rules-preview" });
 		this.renderFolderRulePreview(preview);
+
+		new Setting(containerEl)
+			.setName("Heading rules")
+			.setDesc(
+				'One rule per line, "pattern = project ID", matched against the ' +
+					"nearest heading above a captured line. Lets one note push to " +
+					"several projects — a dictated capture grouped under a heading per " +
+					"job is what this is for. A matching heading rule beats " +
+					"vikunja-project frontmatter, because it is about one section " +
+					"rather than the whole note. First match wins; # starts a comment.",
+			)
+			.addTextArea((textArea) => {
+				textArea
+					.setPlaceholder("6100 * = 18299\n*Pursuit* = 28631\nPersonal = 18294")
+					.setValue(this.plugin.settings.headingMappings)
+					.onChange(async (value) => {
+						this.plugin.settings.headingMappings = value;
+						await this.plugin.saveSettings();
+						this.renderFolderRulePreview(headingPreview, value);
+					});
+				textArea.inputEl.rows = 5;
+				textArea.inputEl.addClass("vnt-folder-rules-input");
+			});
+
+		const headingPreview = containerEl.createDiv({
+			cls: "vnt-folder-rules-preview",
+		});
+		this.renderFolderRulePreview(
+			headingPreview,
+			this.plugin.settings.headingMappings,
+		);
 
 		new Setting(containerEl)
 			.setName("Default labels")
